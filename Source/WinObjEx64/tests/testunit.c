@@ -4,9 +4,9 @@
 *
 *  TITLE:       TESTUNIT.C
 *
-*  VERSION:     1.73
+*  VERSION:     1.74
 *
-*  DATE:        20 Mar 2019
+*  DATE:        03 May 2019
 *
 *  Test code used while debug.
 *
@@ -55,7 +55,6 @@ VOID TestMailslot(
     VOID
 )
 {
-    BOOL bCond = FALSE;
     NTSTATUS status;
     OBJECT_ATTRIBUTES obja;
     UNICODE_STRING    ustr = RTL_CONSTANT_STRING(L"\\Device\\Mailslot\\TestMailslot");
@@ -133,7 +132,7 @@ VOID TestMailslot(
             __nop();
         }
 
-    } while (bCond);
+    } while (FALSE);
 
     if (pAdminSID) FreeSid(pAdminSID);
     if (pEveryoneSID) FreeSid(pEveryoneSID);
@@ -204,7 +203,6 @@ VOID TestPrivateNamespace(
     VOID
 )
 {
-    BOOL                cond = FALSE;
     DWORD               LastError = 0;
     HANDLE              hBoundaryDescriptor = NULL, hBoundaryDescriptor2 = NULL;
     BYTE                localSID[SECURITY_MAX_SID_SIZE];
@@ -339,7 +337,7 @@ VOID TestPrivateNamespace(
         hMutex2 = OpenMutex(MUTEX_ALL_ACCESS, FALSE, L"NamespaceAlias\\TestMutex");
         if (hMutex2) CloseHandle(hMutex2);
 
-    } while (cond);
+    } while (FALSE);
 
     if (hBoundaryDescriptor) RtlDeleteBoundaryDescriptor(hBoundaryDescriptor);
 }
@@ -511,9 +509,58 @@ VOID TestThread()
     g_TestThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)TokenImpersonationThreadProc, NULL, 0, &tid);
 }
 
+VOID TestApiSetResolve()
+{
+    ULONG i, Version;
+    PVOID Data;
+    BOOL Resolved;
+
+    UNICODE_STRING ApiSetLibrary; 
+   // UNICODE_STRING ParentLibrary;
+    UNICODE_STRING ResolvedHostLibrary;
+
+    supApiSetLoadFromFile(&Version, &Data);
+
+    LPWSTR ToResolve[11] = {
+        L"api-ms-win-nevedomaya-ebanaya-hyinua-l1-1-3.dll",
+        L"api-ms-win-core-appinit-l1-1-0.dll",
+        L"api-ms-win-core-com-private-l1-2-0",
+        L"ext-ms-win-fs-clfs-l1-1-0.dll",
+        L"ext-ms-win-core-app-package-registration-l1-1-1",
+        L"ext-ms-win-shell-ntshrui-l1-1-0.dll",
+        NULL,
+        L"api-ms-win-core-psapi-l1-1-0.dll",
+        L"api-ms-win-core-enclave-l1-1-1.dll",
+        L"api-ms-onecoreuap-print-render-l1-1-0.dll",
+        L"api-ms-win-deprecated-apis-advapi-l1-1-0.dll"
+    };
+
+    for (i = 0; i < 11; i++) {
+        RtlInitUnicodeString(&ApiSetLibrary, ToResolve[i]);
+
+        if (NT_SUCCESS(supApiSetResolveLibrary(Data,
+            &ApiSetLibrary,
+            NULL,
+            &Resolved,
+            &ResolvedHostLibrary)))
+        {
+            if (Resolved) {
+                OutputDebugString(ResolvedHostLibrary.Buffer);
+                OutputDebugString(L"\r\n");
+                RtlFreeUnicodeString(&ResolvedHostLibrary);
+            }
+            else {
+                OutputDebugString(L"Could not resolve\r\n");
+            }
+        }
+        else {
+            OutputDebugString(L"Could not resolve, func failed\r\n");
+        }
+    }
+}
+
 VOID TestCall()
 {
-
 }
 
 VOID TestStart(
@@ -521,6 +568,7 @@ VOID TestStart(
 )
 {
     //TestPsObjectSecurity();
+    TestApiSetResolve();
     TestDesktop();
     TestCall();
     TestApiPort();

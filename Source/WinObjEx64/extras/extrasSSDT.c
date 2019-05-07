@@ -4,9 +4,9 @@
 *
 *  TITLE:       EXTRASSSDT.C
 *
-*  VERSION:     1.73
+*  VERSION:     1.74
 *
-*  DATE:        12 Mar 2019
+*  DATE:        03 May 2019
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -811,7 +811,7 @@ _Success_(return != NULL)
 LPCSTR IATEntryToImport(
     _In_ LPVOID Module,
     _In_ LPVOID IATEntry,
-    _Out_ LPCSTR *ImportModuleName
+    _Out_opt_ LPCSTR *ImportModuleName
 )
 {
     PIMAGE_NT_HEADERS           NtHeaders;
@@ -819,8 +819,8 @@ LPCSTR IATEntryToImport(
     ULONG_PTR                   *rname, imprva;
     LPVOID                      *raddr;
 
-    if (ImportModuleName == NULL)
-        return NULL;
+    if (ImportModuleName)
+        *ImportModuleName = NULL;
 
     NtHeaders = RtlImageNtHeader(Module);
     if (NtHeaders->OptionalHeader.NumberOfRvaAndSizes <= IMAGE_DIRECTORY_ENTRY_IMPORT)
@@ -844,7 +844,9 @@ LPCSTR IATEntryToImport(
             {
                 if (((*rname) & IMAGE_ORDINAL_FLAG) == 0)
                 {
-                    *ImportModuleName = (LPCSTR)((ULONG_PTR)Module + impd->Name);
+                    if (ImportModuleName) {
+                        *ImportModuleName = (LPCSTR)((ULONG_PTR)Module + impd->Name);
+                    }
                     return (LPCSTR)&((PIMAGE_IMPORT_BY_NAME)((ULONG_PTR)Module + *rname))->Name;
                 }
             }
@@ -872,6 +874,7 @@ VOID SdtListTableShadow(
     _In_ HWND hwndDlg
 )
 {
+    BOOLEAN     NeedApiSetResolve = (g_NtBuildNumber > 18885);
     ULONG       w32u_limit, w32k_limit, c;
     LONG32      jmpaddr;
     HMODULE     w32u = NULL, w32k = NULL, impdll, forwdll;
@@ -884,6 +887,13 @@ VOID SdtListTableShadow(
     PWIN32_SHADOWTABLE  table, itable;
     RESOLVE_INFO        rfn;
 
+    BOOL                            ResolvedResult;
+    ANSI_STRING                     ResolvedModuleAnsi;
+    UNICODE_STRING                  ResolvedModule, usModuleName;
+    PVOID                           ApiSetMap = NULL;
+    ULONG                           ApiSetSchemaVersion = 0;
+
+    BOOLEAN                         ModuleNameAllocated = FALSE;
     PRTL_PROCESS_MODULE_INFORMATION Module, ForwardModule;
     PRTL_PROCESS_MODULES            pModules = NULL;
 
@@ -990,6 +1000,25 @@ VOID SdtListTableShadow(
             }
 
             //
+            // Query ApiSetMap
+            //
+            if (NeedApiSetResolve) {
+
+                if (!supApiSetLoadFromPeb(&ApiSetSchemaVersion, (PVOID*)&ApiSetMap)) {
+                    MessageBox(hwndDlg, TEXT("ApiSetSchema map not found"), NULL, MB_ICONERROR);
+                    __leave;
+                }
+
+                //
+                // Windows 10+ uses modern ApiSetSchema version, everything else not supported.
+                //
+                if (ApiSetSchemaVersion != 6) {
+                    MessageBox(hwndDlg, TEXT("ApiSetSchema version is unknown"), NULL, MB_ICONERROR);
+                    __leave;
+                }
+            }
+
+            //
             // Set global variables.
             //
             g_kdctx.W32pServiceLimit = w32k_limit;
@@ -1035,7 +1064,65 @@ VOID SdtListTableShadow(
                                 break;
                             }
 
-                            impdll = LoadLibraryExA(ModuleName, NULL, DONT_RESOLVE_DLL_REFERENCES);
+                            impdll = NULL;
+                            ModuleNameAllocated = FALSE;
+
+                            //
+                            // Convert module name to UNICODE.
+                            //
+                            if (RtlCreateUnicodeStringFromAsciiz(&usModuleName, (PSTR)ModuleName)) {
+
+                                //
+                                // Check whatever ApiSet resolving required.
+                                //
+                                if (NeedApiSetResolve) {
+
+                                    ResolvedResult = FALSE;
+                                    RtlInitEmptyUnicodeString(&ResolvedModule, NULL, 0);
+
+                                    //
+                                    // Resolve ApiSet.
+                                    //
+                                    if (NT_SUCCESS(supApiSetResolveLibrary(ApiSetMap,
+                                        &usModuleName,
+                                        NULL,
+                                        &ResolvedResult,
+                                        &ResolvedModule)))
+                                    {
+                                        if (ResolvedResult) {
+
+                                            //
+                                            // ApiSet resolved, load result library.
+                                            //
+                                            impdll = LoadLibraryEx(ResolvedModule.Buffer, NULL, DONT_RESOLVE_DLL_REFERENCES);
+
+                                            //
+                                            // Convert resolved name back to ANSI for module query.
+                                            //
+                                            if (NT_SUCCESS(RtlUnicodeStringToAnsiString(&ResolvedModuleAnsi,
+                                                &ResolvedModule,
+                                                TRUE)))
+                                            {
+                                                ModuleNameAllocated = TRUE;
+                                                ModuleName = ResolvedModuleAnsi.Buffer;
+                                            }
+                                        }
+                                        else {
+                                            OutputDebugString(usModuleName.Buffer);
+                                            OutputDebugString(L"\r\n");
+                                        }
+                                    }
+
+                                }
+                                else {
+                                    //
+                                    // No ApiSet resolve required, load as usual.
+                                    //
+                                    impdll = LoadLibraryEx(usModuleName.Buffer, NULL, DONT_RESOLVE_DLL_REFERENCES);
+                                }
+                                RtlFreeUnicodeString(&usModuleName);
+                            }
+
                             if (impdll == NULL) {
                                 OutputDebugString(TEXT("SdtListTableShadow, could not load import dll\r\n"));
                                 break;
@@ -1124,6 +1211,13 @@ VOID SdtListTableShadow(
                                     itable->KernelStubTargetAddress =
                                         (ULONG_PTR)Module->ImageBase + ((ULONG_PTR)rfn.Function - (ULONG_PTR)impdll);
                                 }
+
+                                //
+                                // In case if ApiSet resolving was used and module name allocated from resolved name - free used memory.
+                                //
+                                if (ModuleNameAllocated)
+                                    RtlFreeAnsiString(&ResolvedModuleAnsi);
+
                             }
                             break;
                         }

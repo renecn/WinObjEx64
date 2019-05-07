@@ -1,3 +1,6 @@
+v1.7.4
++ resolve apisets while viewing shadow table in Windows 10 20H1 >= 18890 builds
+
 v1.7.3
 + threads list in processes dialog
 + view file properties for KisServiceTable/W32pServiceTable dialogs

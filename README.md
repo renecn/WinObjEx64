@@ -32,7 +32,7 @@ In order to build from source you need Microsoft Visual Studio 2013 U4 or Visual
   * v141 for Visual Studio 2017.
 * For v140 and above set Target Platform Version (Project->Properties->General):
   * If v140 then select 8.1 (Note that Windows 8.1 SDK must be installed);
-  * If v141 then select 10.0.17134.0 (Note that Windows 10.0.17134 SDK must be installed). 
+  * If v141 then select 10.0.17134/10.0.17663 (Note that Windows 10.0.17134/10.0.17663 SDK must be installed). 
  
 # What is new
 

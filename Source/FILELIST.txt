@@ -105,5 +105,6 @@ wine.c
 global.h - global include file
 ntos.h - os internals related definitions and prototypes
 ntalpc.h - alpc port dedicated header file
+apisetx.h - apisetschema dedicated header file
 resource.h - studio generated resource header
 ui.h - user interface global constant

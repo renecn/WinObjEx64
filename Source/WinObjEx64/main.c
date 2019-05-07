@@ -4,9 +4,9 @@
 *
 *  TITLE:       MAIN.C
 *
-*  VERSION:     1.73
+*  VERSION:     1.74
 *
-*  DATE:        30 Mar 2019
+*  DATE:        03 May 2019
 *
 *  Program entry point and main window handler.
 *
@@ -947,7 +947,7 @@ BOOL WinObjInitGlobals(
     _In_ BOOLEAN IsWine)
 {
     SIZE_T cch;
-    BOOL bResult = FALSE, bCond = FALSE;
+    BOOL bResult = FALSE;
     LPWSTR *szArglist;
     INT nArgs = 0;
 
@@ -1014,7 +1014,7 @@ BOOL WinObjInitGlobals(
 
         bResult = TRUE;
 
-    } while (bCond);
+    } while (FALSE);
 
     if (bResult == FALSE) {
         if (g_WinObj.Heap)
@@ -1037,7 +1037,7 @@ UINT WinObjExMain()
     BOOLEAN                 IsWine = FALSE;
     MSG                     msg1;
     WNDCLASSEX              wincls;
-    BOOL                    IsFullAdmin = FALSE, rv = TRUE, cond = FALSE, bLocalSystem = FALSE;
+    BOOL                    IsFullAdmin = FALSE, rv = TRUE, bLocalSystem = FALSE;
     ATOM                    class_atom = 0;
     INITCOMMONCONTROLSEX    icc;
     LVCOLUMN                col;
@@ -1478,7 +1478,7 @@ UINT WinObjExMain()
             DispatchMessage(&msg1);
         } while (rv != 0);
 
-    } while (cond);
+    } while (FALSE);
 
     if (class_atom != 0)
         UnregisterClass(MAKEINTATOM(class_atom), g_WinObj.hInstance);

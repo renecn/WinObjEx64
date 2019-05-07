@@ -4,9 +4,9 @@
 *
 *  TITLE:       SUP.C
 *
-*  VERSION:     1.73
+*  VERSION:     1.74
 *
-*  DATE:        31 Mar 2019
+*  DATE:        03 May 2019
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -1200,7 +1200,7 @@ BOOL supUserIsFullAdmin(
     VOID
 )
 {
-    BOOL     bResult = FALSE, cond = FALSE;
+    BOOL     bResult = FALSE;
     HANDLE   hToken = NULL;
     NTSTATUS status;
     DWORD    i, Attributes;
@@ -1253,7 +1253,7 @@ BOOL supUserIsFullAdmin(
         }
         supHeapFree(pTkGroups);
 
-    } while (cond);
+    } while (FALSE);
 
     if (AdministratorsGroup != NULL) {
         RtlFreeSid(AdministratorsGroup);
@@ -1400,7 +1400,7 @@ BOOL supxQueryKnownDllsLink(
     _In_ PVOID *lpKnownDllsBuffer
 )
 {
-    BOOL                bResult = FALSE, cond = FALSE;
+    BOOL                bResult = FALSE;
     HANDLE              hLink = NULL;
     SIZE_T              memIO;
     ULONG               bytesNeeded;
@@ -1439,7 +1439,7 @@ BOOL supxQueryKnownDllsLink(
             }
         }
 
-    } while (cond);
+    } while (FALSE);
     if (hLink != NULL) NtClose(hLink);
     return bResult;
 }
@@ -1858,7 +1858,7 @@ BOOL supCreateSCMSnapshot(
     _Out_opt_ SCMDB *Snapshot
 )
 {
-    BOOL      cond = FALSE, bResult = FALSE;
+    BOOL      bResult = FALSE;
     SC_HANDLE schSCManager;
     DWORD     dwBytesNeeded = 0, dwServicesReturned = 0, dwSize;
     PVOID     Services = NULL;
@@ -1926,7 +1926,7 @@ BOOL supCreateSCMSnapshot(
 
         CloseServiceHandle(schSCManager);
 
-    } while (cond);
+    } while (FALSE);
 
     if (Snapshot) {
         Snapshot->Entries = Services;
@@ -2537,7 +2537,7 @@ BOOL supQueryDriverDescription(
     _In_ DWORD ccBuffer //size of buffer in chars
 )
 {
-    BOOL    bResult, cond = FALSE;
+    BOOL    bResult;
     LPWSTR  lpServiceName = NULL;
     LPWSTR  lpDisplayName = NULL;
     LPWSTR  lpRegKey = NULL;
@@ -2664,7 +2664,7 @@ BOOL supQueryDriverDescription(
 
             }
 
-        } while (cond);
+        } while (FALSE);
 
         if (vinfo) {
             supHeapFree(vinfo);
@@ -2693,7 +2693,7 @@ BOOL supQuerySectionFileInfo(
     _In_ DWORD ccBuffer //size of buffer in chars
 )
 {
-    BOOL                        bResult, cond = FALSE;
+    BOOL                        bResult;
     HANDLE                      hSection;
     PVOID                       vinfo;
     LPWSTR                      pcValue, lpszFileName, lpszKnownDlls;
@@ -2803,7 +2803,7 @@ BOOL supQuerySectionFileInfo(
             _strncpy(Buffer, ccBuffer, pcValue, dwInfoSize);
         }
 
-    } while (cond);
+    } while (FALSE);
 
     if (hSection) NtClose(hSection);
     if (vinfo) supHeapFree(vinfo);
@@ -3166,7 +3166,7 @@ BOOL supGetWin32FileName(
     _In_ SIZE_T ccWin32FileName
 )
 {
-    BOOL                bCond = FALSE, bResult = FALSE;
+    BOOL                bResult = FALSE;
     NTSTATUS            status = STATUS_UNSUCCESSFUL;
     HANDLE              hFile = NULL;
     UNICODE_STRING      NtFileName;
@@ -3210,7 +3210,7 @@ BOOL supGetWin32FileName(
 
         bResult = TRUE;
 
-    } while (bCond);
+    } while (FALSE);
 
     if (hFile)
         NtClose(hFile);
@@ -3454,7 +3454,7 @@ BOOL supQueryObjectTrustLabel(
     _Out_ PULONG ProtectionType,
     _Out_ PULONG ProtectionLevel)
 {
-    BOOL                            bCond = FALSE, bResult = FALSE;
+    BOOL                            bResult = FALSE;
     BOOLEAN                         saclPresent = FALSE, saclDefaulted = FALSE;
     ULONG                           i, Length = 0, returnLength = 0;
 
@@ -3535,7 +3535,7 @@ BOOL supQueryObjectTrustLabel(
             }
         }
 
-    } while (bCond);
+    } while (FALSE);
 
     if (pSD) supHeapFree(pSD);
 
@@ -3736,7 +3736,7 @@ HANDLE supxGetSystemToken(
 BOOL supRunAsLocalSystem(
     _In_ HWND hwndParent)
 {
-    BOOL bCond = FALSE, bSuccess = FALSE;
+    BOOL bSuccess = FALSE;
     PVOID ProcessList;
     ULONG SessionId = NtCurrentPeb()->SessionId, dummy;
 
@@ -3896,7 +3896,7 @@ BOOL supRunAsLocalSystem(
             CloseHandle(pi.hThread);
         }
 
-    } while (bCond);
+    } while (FALSE);
 
     if (hImpersonationToken) {
         NtClose(hImpersonationToken);
@@ -4493,10 +4493,15 @@ VOID supShowLastError(
     LPWSTR lpMsgBuf = NULL;
 
     if (FormatMessage(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-        NULL, LastError,
+        FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_FROM_SYSTEM |
+        FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL,
+        LastError,
         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        (LPWSTR)&lpMsgBuf, 0, NULL))
+        (LPWSTR)&lpMsgBuf,
+        0,
+        NULL))
     {
         MessageBox(hWnd, lpMsgBuf, Source, MB_TOPMOST | MB_ICONERROR);
         LocalFree(lpMsgBuf);
@@ -5448,4 +5453,377 @@ BOOL supPHLCreate(
     *NumberOfProcesses = numberOfProcesses;
 
     return ((numberOfProcesses > 0) && (numberOfThreads > 0));
+}
+
+/*
+* supApiSetpSearchForApiSetHost
+*
+* Purpose:
+*
+* Resolve alias name if present.
+* Directly ripped from ntdll!ApiSetpSearchForApiSetHost.
+*
+*/
+PAPI_SET_VALUE_ENTRY_V6 supApiSetpSearchForApiSetHost(
+    _In_ PAPI_SET_NAMESPACE_ENTRY_V6 Entry,
+    _In_ PWCHAR ApiSetToResolve,
+    _In_ USHORT ApiSetToResolveLength,
+    _In_ PVOID Namespace)
+{
+    API_SET_VALUE_ENTRY_V6 *ValueEntry;
+    API_SET_VALUE_ENTRY_V6 *AliasValueEntry, *Result = NULL;
+    ULONG AliasCount, i, AliasIndex;
+    PWCHAR AliasName;
+    LONG CompareResult;
+
+    ValueEntry = APISET_TO_VALUE_ENTRY(Namespace, Entry, 0);
+    AliasCount = Entry->Count;
+
+    if (AliasCount >= 1) {
+
+        i = 1;
+
+        do {
+            AliasIndex = (AliasCount + i) >> 1;
+            AliasValueEntry = APISET_TO_VALUE_ENTRY(Namespace, Entry, AliasIndex);
+            AliasName = APISET_TO_VALUE_NAME(Namespace, AliasValueEntry);
+
+            CompareResult = RtlCompareUnicodeStrings(ApiSetToResolve,
+                ApiSetToResolveLength,
+                AliasName,
+                AliasValueEntry->NameLength >> 1,
+                TRUE);
+
+            if (CompareResult < 0) {
+                AliasCount = AliasIndex - 1;
+            }
+            else {
+                if (CompareResult == 0) {
+
+                    Result = APISET_TO_VALUE_ENTRY(Namespace,
+                        Entry,
+                        ((AliasCount + i) >> 1));
+
+                    break;
+                }
+                i = (AliasCount + 1);
+            }
+
+        } while (i <= AliasCount);
+
+    }
+
+    return Result;
+}
+
+/*
+* supApiSetpSearchForApiSet
+*
+* Purpose:
+*
+* Find apiset entry by hash from it name.
+*
+*/
+PAPI_SET_NAMESPACE_ENTRY_V6 supApiSetpSearchForApiSet(
+    _In_ PVOID Namespace,
+    _In_ PWCHAR ResolveName,
+    _In_ USHORT ResolveNameEffectiveLength)
+{
+    ULONG LookupHash = 0, i, c, HashIndex, EntryCount, EntryHash;
+    WCHAR ch;
+
+    PWCHAR NamespaceEntryName;
+    API_SET_HASH_ENTRY_V6 *LookupHashEntry;
+    PAPI_SET_NAMESPACE_ENTRY_V6 NamespaceEntry = NULL;
+    PAPI_SET_NAMESPACE_ARRAY_V6 ApiSetNamespace = (PAPI_SET_NAMESPACE_ARRAY_V6)Namespace;
+
+    if ((ApiSetNamespace->Count == 0) || (ResolveNameEffectiveLength == 0))
+        return NULL;
+
+    //
+    // Calculate lookup hash.
+    //
+    for (i = 0; i < ResolveNameEffectiveLength; i++) {
+        ch = locase_w(ResolveName[i]);
+        LookupHash = LookupHash * ApiSetNamespace->HashMultiplier + ch;
+    }
+
+    //
+    // Search for hash.
+    //
+    c = 0;
+    EntryCount = ApiSetNamespace->Count - 1;
+    do {
+
+        HashIndex = (EntryCount + c) >> 1;
+
+        LookupHashEntry = APISET_TO_HASH_ENTRY(ApiSetNamespace, HashIndex);
+        EntryHash = LookupHashEntry->Hash;
+
+        if (LookupHash < EntryHash) {
+            EntryCount = HashIndex - 1;
+            if (c > EntryCount)
+                return NULL;
+            continue;
+        }
+
+        if (EntryHash == LookupHash) {
+            //
+            // Hash found, query namespace entry and break.
+            //
+            NamespaceEntry = APISET_TO_NAMESPACE_ENTRY(ApiSetNamespace, LookupHashEntry);
+            break;
+        }
+
+        c = HashIndex + 1;
+
+        if (c > EntryCount)
+            return NULL;
+
+    } while (1);
+
+    if (NamespaceEntry == NULL)
+        return NULL;
+
+    //
+    // Verify entry name.
+    //
+    NamespaceEntryName = APISET_TO_NAMESPACE_ENTRY_NAME(ApiSetNamespace, NamespaceEntry);
+
+    if (RtlCompareUnicodeStrings(ResolveName,
+        ResolveNameEffectiveLength,
+        NamespaceEntryName,
+        (NamespaceEntry->HashNameLength >> 1),
+        TRUE) == 0)
+    {
+        return NamespaceEntry;
+    }
+
+    return NULL;
+}
+
+/*
+* supApiSetResolveLibrary
+*
+* Purpose:
+*
+* Resolve apiset library name.
+*
+*/
+_Success_(return == STATUS_SUCCESS)
+NTSTATUS supApiSetResolveLibrary(
+    _In_ PVOID Namespace,
+    _In_ PUNICODE_STRING ApiSetToResolve,
+    _In_opt_ PUNICODE_STRING ApiSetParentName,
+    _Out_ PBOOL Resolved,
+    _Out_ PUNICODE_STRING ResolvedHostLibraryName
+)
+{
+    BOOL IsResolved = FALSE;
+    PWCHAR BufferPtr;
+    USHORT Length;
+    ULONG64 SchemaPrefix;
+    API_SET_NAMESPACE_ENTRY_V6 *ResolvedEntry;
+    API_SET_VALUE_ENTRY_V6 *HostLibraryEntry = NULL;
+    PAPI_SET_NAMESPACE_ARRAY_V6 ApiSetNamespace = (PAPI_SET_NAMESPACE_ARRAY_V6)Namespace;
+
+    __try {
+
+        *Resolved = FALSE;
+
+        //
+        // Only Win10+ version supported.
+        //
+        if (ApiSetNamespace->Version != 6)
+            return STATUS_UNKNOWN_REVISION;
+
+        if (ApiSetToResolve->Length < 8)
+            return STATUS_INVALID_PARAMETER_2;
+
+        //
+        // Check prefix.
+        //
+        SchemaPrefix = ((ULONG64*)ApiSetToResolve->Buffer)[0] & 0xFFFFFFDFFFDFFFDF;
+        if ((SchemaPrefix != API_SET_PREFIX_API) && (SchemaPrefix != API_SET_PREFIX_EXT)) //API- or EXT- only
+            return STATUS_INVALID_PARAMETER;
+
+        //
+        // Calculate length without everything after last hyphen including dll suffix.
+        //
+        BufferPtr = (PWCHAR)RtlOffsetToPointer(ApiSetToResolve->Buffer, ApiSetToResolve->Length);
+
+        Length = ApiSetToResolve->Length;
+
+        do {
+            if (Length <= 1)
+                break;
+
+            Length -= sizeof(WCHAR);
+            --BufferPtr;
+
+        } while (*BufferPtr != L'-');
+
+        Length = (USHORT)Length >> 1;
+
+        //
+        // Resolve apiset entry.
+        //
+        ResolvedEntry = supApiSetpSearchForApiSet(
+            Namespace,
+            ApiSetToResolve->Buffer,
+            Length);
+
+        if (ResolvedEntry == NULL)
+            return STATUS_INVALID_PARAMETER;
+
+        //
+        // If parent name specified and resolved entry has more than 1 value entry check it out.
+        //
+        if (ApiSetParentName && ResolvedEntry->Count > 1) {
+
+            HostLibraryEntry = supApiSetpSearchForApiSetHost(ResolvedEntry,
+                ApiSetParentName->Buffer,
+                ApiSetParentName->Length >> 1,
+                Namespace);
+
+        }
+        else {
+
+            //
+            // If resolved apiset entry has value check it out.
+            //
+            if (ResolvedEntry->Count > 0) {
+                HostLibraryEntry = APISET_TO_VALUE_ENTRY(Namespace, ResolvedEntry, 0);
+            }
+        }
+
+        //
+        // Set output parameter if host library resolved.
+        //
+        if (HostLibraryEntry) {
+            if (!EMPTY_NAMESPACE_VALUE(HostLibraryEntry->ValueOffset,
+                HostLibraryEntry->ValueLength,
+                HostLibraryEntry->NameOffset,
+                HostLibraryEntry->NameLength))
+            {
+                IsResolved = TRUE;
+
+                //
+                // Host library name is not null terminated, handle that.
+                //
+                BufferPtr = (PWSTR)RtlAllocateHeap(NtCurrentPeb()->ProcessHeap, HEAP_ZERO_MEMORY, HostLibraryEntry->ValueLength + sizeof(WCHAR));
+                if (BufferPtr) {
+
+                    RtlCopyMemory(BufferPtr,
+                        (PWSTR)RtlOffsetToPointer(Namespace, HostLibraryEntry->ValueOffset),
+                        (SIZE_T)HostLibraryEntry->ValueLength);
+
+                    ResolvedHostLibraryName->Length = (USHORT)HostLibraryEntry->ValueLength;
+                    ResolvedHostLibraryName->MaximumLength = (USHORT)HostLibraryEntry->ValueLength;
+                    ResolvedHostLibraryName->Buffer = BufferPtr;
+                }
+            }
+        }
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER) {
+        OutputDebugString(L"supApiSetResolveLibrary exception");
+        return GetExceptionCode();
+    }
+
+    *Resolved = IsResolved;
+    return STATUS_SUCCESS;
+}
+
+/*
+* supApiSetLoadFromPeb
+*
+* Purpose:
+*
+* Load ApiSetSchema map from PEB.
+*
+*/
+BOOLEAN supApiSetLoadFromPeb(
+    _Out_ PULONG SchemaVersion,
+    _Out_ PVOID* DataPointer)
+{
+    PBYTE DataPtr = NULL;
+    
+    __try {
+        *SchemaVersion = 0;
+        *DataPointer = 0;
+
+        DataPtr = (PBYTE)NtCurrentPeb()->ApiSetMap;
+        *SchemaVersion = *(ULONG*)DataPtr;
+        *DataPointer = DataPtr;
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER) {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+/*
+* supApiSetLoadFromFile
+*
+* Purpose:
+*
+* Load ApiSetSchema map from file.
+*
+*/
+BOOLEAN supApiSetLoadFromFile(
+    _Out_ PULONG SchemaVersion,
+    _Out_ PVOID* DataPointer)
+{
+    HMODULE MappedImageBase;
+    PBYTE BaseAddress;
+    PIMAGE_NT_HEADERS NtHeaders;
+    IMAGE_SECTION_HEADER *SectionTableEntry;
+
+    ULONG DataSize = 0;
+    PBYTE DataPtr = NULL;
+
+    WORD i;
+
+    WCHAR szBuffer[MAX_PATH * 2];
+
+    *SchemaVersion = 0;
+    *DataPointer = 0;
+
+    _strcpy(szBuffer, g_WinObj.szSystemDirectory);
+    _strcat(szBuffer, TEXT("\\apisetschema.dll"));
+
+    MappedImageBase = LoadLibraryEx(szBuffer, NULL, LOAD_LIBRARY_AS_DATAFILE);
+    if (MappedImageBase == NULL)
+        return FALSE;
+
+    __try {
+
+        BaseAddress = (PBYTE)(((ULONG_PTR)MappedImageBase) & ~3);
+        NtHeaders = RtlImageNtHeader((PVOID)BaseAddress);
+        SectionTableEntry = IMAGE_FIRST_SECTION(NtHeaders);
+
+        i = NtHeaders->FileHeader.NumberOfSections;
+        while (i > 0) {
+            if (_strncmpi_a((CHAR*)&SectionTableEntry->Name,
+                API_SET_SECTION_NAME,
+                sizeof(API_SET_SECTION_NAME)) == 0)
+            {
+                DataSize = SectionTableEntry->SizeOfRawData;
+                DataPtr = (PBYTE)BaseAddress + SectionTableEntry->PointerToRawData;
+                break;
+            }
+            i -= 1;
+            SectionTableEntry += 1;
+        }
+
+        if (DataPtr) {
+            *SchemaVersion = *(ULONG*)DataPtr;
+            *DataPointer = DataPtr;
+        }
+
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER) {
+        return FALSE;
+    }
+    return TRUE;
 }

@@ -4,9 +4,9 @@
 *
 *  TITLE:       NTOS.H
 *
-*  VERSION:     1.111
+*  VERSION:     1.112
 *
-*  DATE:        30 Mar 2019
+*  DATE:        03 May 2019
 *
 *  Common header file for the ntos API functions and definitions.
 *
@@ -6135,6 +6135,14 @@ NTAPI
 RtlAnsiStringToUnicodeString(
     _Out_ PUNICODE_STRING DestinationString,
     _In_ PCANSI_STRING SourceString,
+    _In_ BOOLEAN AllocateDestinationString);
+
+NTSYSAPI
+NTSTATUS
+NTAPI
+RtlUnicodeStringToAnsiString(
+    _Inout_ PANSI_STRING DestinationString,
+    _In_ PUNICODE_STRING SourceString,
     _In_ BOOLEAN AllocateDestinationString);
 
 NTSYSAPI

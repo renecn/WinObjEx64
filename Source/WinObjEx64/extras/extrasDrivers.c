@@ -4,9 +4,9 @@
 *
 *  TITLE:       EXTRASDRIVERS.C
 *
-*  VERSION:     1.73
+*  VERSION:     1.74
 *
-*  DATE:        30 Mar 2019
+*  DATE:        03 May 2019
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -59,7 +59,7 @@ VOID DrvDumpDriver(
     VOID
 )
 {
-    BOOL      bCond = FALSE, bSuccess = FALSE;
+    BOOL      bSuccess = FALSE;
     INT       iPos;
     ULONG     ImageSize;
     SIZE_T    sz;
@@ -156,7 +156,7 @@ VOID DrvDumpDriver(
             MessageBox(DrvDlgContext.hwndDlg, szBuffer, PROGRAM_NAME, MB_ICONINFORMATION);
         }
 
-    } while (bCond);
+    } while (FALSE);
 
     if (lpDriverName) supHeapFree(lpDriverName);
 }
@@ -221,7 +221,6 @@ VOID DrvListDrivers(
     _In_ BOOL bRefresh
 )
 {
-    BOOL   bCond = FALSE;
     INT    index, iImage;
     ULONG  i, c;
     LVITEM lvitem;
@@ -312,7 +311,7 @@ VOID DrvListDrivers(
         ultostr(c, _strend(szBuffer));
         SetWindowText(DrvDlgContext.StatusBar, szBuffer);
 
-    } while (bCond);
+    } while (FALSE);
 
     if (pModulesList) supHeapFree(pModulesList);
 

@@ -4,9 +4,9 @@
 *
 *  TITLE:       GLOBAL.H
 *
-*  VERSION:     1.73
+*  VERSION:     1.74
 *
-*  DATE:        30 Mar 2019
+*  DATE:        03 May 2019
 *
 *  Common header file for the Windows Object Explorer.
 *
@@ -68,6 +68,7 @@
 #include "minirtl\rtltypes.h"
 #include "ntos\ntos.h"
 #include "ntos\ntalpc.h"
+#include "ntos\apisetx.h"
 
 #define _NTDEF_
 #include <ntsecapi.h>
