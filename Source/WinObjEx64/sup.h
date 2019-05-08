@@ -589,7 +589,3 @@ NTSTATUS supApiSetResolveLibrary(
 BOOLEAN supApiSetLoadFromPeb(
     _Out_ PULONG SchemaVersion,
     _Out_ PVOID* DataPointer);
-
-BOOLEAN supApiSetLoadFromFile(
-    _Out_ PULONG SchemaVersion,
-    _Out_ PVOID* DataPointer);

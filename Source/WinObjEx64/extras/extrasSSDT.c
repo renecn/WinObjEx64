@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        03 May 2019
+*  DATE:        07 May 2019
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -1108,8 +1108,7 @@ VOID SdtListTableShadow(
                                             }
                                         }
                                         else {
-                                            OutputDebugString(usModuleName.Buffer);
-                                            OutputDebugString(L"\r\n");
+                                            DbgPrint("Could not resolve apiset %wZ\r\n", usModuleName);
                                         }
                                     }
 

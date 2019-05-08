@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        03 May 2019
+*  DATE:        07 May 2019
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -5512,6 +5512,9 @@ PAPI_SET_VALUE_ENTRY_V6 supApiSetpSearchForApiSetHost(
         } while (i <= AliasCount);
 
     }
+    else {
+        Result = ValueEntry;
+    }
 
     return Result;
 }
@@ -5643,7 +5646,7 @@ NTSTATUS supApiSetResolveLibrary(
         //
         // Check prefix.
         //
-        SchemaPrefix = ((ULONG64*)ApiSetToResolve->Buffer)[0] & 0xFFFFFFDFFFDFFFDF;
+        SchemaPrefix = APISET_TO_UPPER_PREFIX(((ULONG64*)ApiSetToResolve->Buffer)[0]);
         if ((SchemaPrefix != API_SET_PREFIX_API) && (SchemaPrefix != API_SET_PREFIX_EXT)) //API- or EXT- only
             return STATUS_INVALID_PARAMETER;
 
@@ -5701,17 +5704,16 @@ NTSTATUS supApiSetResolveLibrary(
         // Set output parameter if host library resolved.
         //
         if (HostLibraryEntry) {
-            if (!EMPTY_NAMESPACE_VALUE(HostLibraryEntry->ValueOffset,
-                HostLibraryEntry->ValueLength,
-                HostLibraryEntry->NameOffset,
-                HostLibraryEntry->NameLength))
-            {
+            if (!APISET_EMPTY_NAMESPACE_VALUE(HostLibraryEntry)) {
+
                 IsResolved = TRUE;
 
                 //
                 // Host library name is not null terminated, handle that.
                 //
-                BufferPtr = (PWSTR)RtlAllocateHeap(NtCurrentPeb()->ProcessHeap, HEAP_ZERO_MEMORY, HostLibraryEntry->ValueLength + sizeof(WCHAR));
+                BufferPtr = (PWSTR)RtlAllocateHeap(NtCurrentPeb()->ProcessHeap, HEAP_ZERO_MEMORY, 
+                    HostLibraryEntry->ValueLength + sizeof(WCHAR));
+
                 if (BufferPtr) {
 
                     RtlCopyMemory(BufferPtr,
@@ -5755,72 +5757,6 @@ BOOLEAN supApiSetLoadFromPeb(
         DataPtr = (PBYTE)NtCurrentPeb()->ApiSetMap;
         *SchemaVersion = *(ULONG*)DataPtr;
         *DataPointer = DataPtr;
-    }
-    __except (EXCEPTION_EXECUTE_HANDLER) {
-        return FALSE;
-    }
-    return TRUE;
-}
-
-/*
-* supApiSetLoadFromFile
-*
-* Purpose:
-*
-* Load ApiSetSchema map from file.
-*
-*/
-BOOLEAN supApiSetLoadFromFile(
-    _Out_ PULONG SchemaVersion,
-    _Out_ PVOID* DataPointer)
-{
-    HMODULE MappedImageBase;
-    PBYTE BaseAddress;
-    PIMAGE_NT_HEADERS NtHeaders;
-    IMAGE_SECTION_HEADER *SectionTableEntry;
-
-    ULONG DataSize = 0;
-    PBYTE DataPtr = NULL;
-
-    WORD i;
-
-    WCHAR szBuffer[MAX_PATH * 2];
-
-    *SchemaVersion = 0;
-    *DataPointer = 0;
-
-    _strcpy(szBuffer, g_WinObj.szSystemDirectory);
-    _strcat(szBuffer, TEXT("\\apisetschema.dll"));
-
-    MappedImageBase = LoadLibraryEx(szBuffer, NULL, LOAD_LIBRARY_AS_DATAFILE);
-    if (MappedImageBase == NULL)
-        return FALSE;
-
-    __try {
-
-        BaseAddress = (PBYTE)(((ULONG_PTR)MappedImageBase) & ~3);
-        NtHeaders = RtlImageNtHeader((PVOID)BaseAddress);
-        SectionTableEntry = IMAGE_FIRST_SECTION(NtHeaders);
-
-        i = NtHeaders->FileHeader.NumberOfSections;
-        while (i > 0) {
-            if (_strncmpi_a((CHAR*)&SectionTableEntry->Name,
-                API_SET_SECTION_NAME,
-                sizeof(API_SET_SECTION_NAME)) == 0)
-            {
-                DataSize = SectionTableEntry->SizeOfRawData;
-                DataPtr = (PBYTE)BaseAddress + SectionTableEntry->PointerToRawData;
-                break;
-            }
-            i -= 1;
-            SectionTableEntry += 1;
-        }
-
-        if (DataPtr) {
-            *SchemaVersion = *(ULONG*)DataPtr;
-            *DataPointer = DataPtr;
-        }
-
     }
     __except (EXCEPTION_EXECUTE_HANDLER) {
         return FALSE;

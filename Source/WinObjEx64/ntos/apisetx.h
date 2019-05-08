@@ -4,9 +4,9 @@
 *
 *  TITLE:       APISETX.H
 *
-*  VERSION:     1.04
+*  VERSION:     1.05
 *
-*  DATE:        03 May 2019
+*  DATE:        08 May 2019
 *
 *  Common header file for the ApiSetSchema definitions.
 *
@@ -59,8 +59,11 @@
 #define API_SET_SCHEMA_VERSION_V4    4
 #define API_SET_SCHEMA_VERSION_V6    6
 
-#define EMPTY_NAMESPACE_VALUE(ValueOffset, ValueLength, NameOffset, NameLength)\
-    ((ValueOffset == 0) && (ValueLength == 0) && (NameOffset == 0) && (NameLength == 0))
+#define APISET_EMPTY_NAMESPACE_VALUE(ValueEntry) \
+    ((ValueEntry->ValueOffset == 0) && (ValueEntry->ValueLength == 0) && \
+    (ValueEntry->NameOffset == 0) && (ValueEntry->NameLength == 0))
+
+#define APISET_TO_UPPER_PREFIX(x) (x & 0xFFFFFFDFFFDFFFDFULL)
 
 //
 // Macro for APISET structures.

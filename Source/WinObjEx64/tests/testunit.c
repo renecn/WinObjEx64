@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        03 May 2019
+*  DATE:        07 May 2019
 *
 *  Test code used while debug.
 *
@@ -111,7 +111,7 @@ VOID TestMailslot(
             pSD,
             TRUE,
             pACL,
-            FALSE)) 
+            FALSE))
         {
             break;
         }
@@ -255,9 +255,9 @@ VOID TestPrivateNamespace(
         sa.bInheritHandle = FALSE;
         if (!ConvertStringSecurityDescriptorToSecurityDescriptor(
             TEXT("D:(A;;GA;;;BA)"),
-            SDDL_REVISION_1, 
-            &sa.lpSecurityDescriptor, 
-            NULL)) 
+            SDDL_REVISION_1,
+            &sa.lpSecurityDescriptor,
+            NULL))
         {
             break;
         }
@@ -273,9 +273,9 @@ VOID TestPrivateNamespace(
         }
         g_TestMutex = CreateMutex(NULL, FALSE, TEXT("NamespaceAlias\\TestMutex"));
 
-//        hMutex = OpenMutex(MUTEX_ALL_ACCESS, FALSE, TEXT("NamespaceAlias\\TestMutex"));
-  //      if (hMutex) 
-    //        CloseHandle(hMutex);
+        //        hMutex = OpenMutex(MUTEX_ALL_ACCESS, FALSE, TEXT("NamespaceAlias\\TestMutex"));
+          //      if (hMutex) 
+            //        CloseHandle(hMutex);
 
 
         RtlInitUnicodeString(&MutexName, TEXT("TestMutex"));
@@ -298,9 +298,9 @@ VOID TestPrivateNamespace(
         if (!CreateWellKnownSid(WinWorldSid, NULL, pLocalAdminSID, &cbSID)) {
             break;
         }
-      /*  if (!NT_SUCCESS(RtlAddSIDToBoundaryDescriptor(&hBoundaryDescriptor2, pLocalAdminSID))) {
-            break;
-        }*/
+        /*  if (!NT_SUCCESS(RtlAddSIDToBoundaryDescriptor(&hBoundaryDescriptor2, pLocalAdminSID))) {
+              break;
+          }*/
 
         RtlSecureZeroMemory(&sa, sizeof(sa));
         sa.nLength = sizeof(sa);
@@ -412,7 +412,7 @@ VOID TestJob()
                 NULL,
                 NULL,
                 &si,
-                &pi)) 
+                &pi))
             {
                 AssignProcessToJobObject(g_TestJob, pi.hProcess);
                 CloseHandle(pi.hThread);
@@ -428,7 +428,7 @@ VOID TestPsObjectSecurity(
     DWORD dwErr;
     PACL EmptyDacl;
     HANDLE hObject;
-    
+
     if (bThread)
         hObject = GetCurrentThread();
     else
@@ -438,20 +438,20 @@ VOID TestPsObjectSecurity(
     if (EmptyDacl) {
 
         if (!InitializeAcl(
-            EmptyDacl, 
-            sizeof(ACL), 
-            ACL_REVISION)) 
+            EmptyDacl,
+            sizeof(ACL),
+            ACL_REVISION))
         {
             dwErr = GetLastError();
         }
         else {
-            
+
             dwErr = SetSecurityInfo(hObject,
                 SE_KERNEL_OBJECT,
-                DACL_SECURITY_INFORMATION, 
-                NULL, 
-                NULL, 
-                EmptyDacl, 
+                DACL_SECURITY_INFORMATION,
+                NULL,
+                NULL,
+                EmptyDacl,
                 NULL);
         }
 
@@ -515,11 +515,13 @@ VOID TestApiSetResolve()
     PVOID Data;
     BOOL Resolved;
 
-    UNICODE_STRING ApiSetLibrary; 
-   // UNICODE_STRING ParentLibrary;
+    NTSTATUS Status;
+
+    UNICODE_STRING ApiSetLibrary;
+    UNICODE_STRING ParentLibrary;
     UNICODE_STRING ResolvedHostLibrary;
 
-    supApiSetLoadFromFile(&Version, &Data);
+    supApiSetLoadFromPeb(&Version, &Data);
 
     LPWSTR ToResolve[11] = {
         L"api-ms-win-nevedomaya-ebanaya-hyinua-l1-1-3.dll",
@@ -535,27 +537,50 @@ VOID TestApiSetResolve()
         L"api-ms-win-deprecated-apis-advapi-l1-1-0.dll"
     };
 
+
     for (i = 0; i < 11; i++) {
         RtlInitUnicodeString(&ApiSetLibrary, ToResolve[i]);
 
-        if (NT_SUCCESS(supApiSetResolveLibrary(Data,
+        Status = supApiSetResolveLibrary(Data,
             &ApiSetLibrary,
             NULL,
             &Resolved,
-            &ResolvedHostLibrary)))
-        {
+            &ResolvedHostLibrary);
+
+        if (NT_SUCCESS(Status)) {
             if (Resolved) {
-                OutputDebugString(ResolvedHostLibrary.Buffer);
-                OutputDebugString(L"\r\n");
+                DbgPrint("Resolved apiset %wZ\r\n", ResolvedHostLibrary);
                 RtlFreeUnicodeString(&ResolvedHostLibrary);
             }
             else {
-                OutputDebugString(L"Could not resolve\r\n");
+                DbgPrint("Could not resolve apiset %wZ\r\n", ApiSetLibrary);
             }
         }
         else {
-            OutputDebugString(L"Could not resolve, func failed\r\n");
+            DbgPrint("supApiSetResolveLibrary failed 0x%lx\r\n", Status);
         }
+    }
+
+    RtlInitUnicodeString(&ParentLibrary, L"kernel32.dll");
+    RtlInitUnicodeString(&ApiSetLibrary, L"api-ms-win-core-processsecurity-l1-1-0.dll");
+
+    Status = supApiSetResolveLibrary(Data,
+        &ApiSetLibrary,
+        &ParentLibrary,
+        &Resolved,
+        &ResolvedHostLibrary);
+
+    if (NT_SUCCESS(Status)) {
+        if (Resolved) {
+            DbgPrint("Resolved apiset %wZ\r\n", ResolvedHostLibrary);
+            RtlFreeUnicodeString(&ResolvedHostLibrary);
+        }
+        else {
+            DbgPrint("Could not resolve apiset %wZ\r\n", ApiSetLibrary);
+        }
+    }
+    else {
+        DbgPrint("supApiSetResolveLibrary failed 0x%lx\r\n", Status);
     }
 }
 
