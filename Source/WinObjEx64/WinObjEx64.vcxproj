@@ -408,6 +408,7 @@
     <ClCompile Include="minirtl\_strncpy.c" />
     <ClCompile Include="minirtl\_strstr.c" />
     <ClCompile Include="minirtl\_strstri.c" />
+    <ClCompile Include="ntos\ntldr.c" />
     <ClCompile Include="objects.c" />
     <ClCompile Include="props\propBasic.c" />
     <ClCompile Include="props\propDesktop.c" />
@@ -452,6 +453,7 @@
     <ClInclude Include="msvcver.h" />
     <ClInclude Include="ntos\apisetx.h" />
     <ClInclude Include="ntos\ntalpc.h" />
+    <ClInclude Include="ntos\ntldr.h" />
     <ClInclude Include="ntos\ntos.h" />
     <ClInclude Include="objects.h" />
     <ClInclude Include="kldbg_patterns.h" />

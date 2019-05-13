@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        07 May 2019
+*  DATE:        08 May 2019
 *
 *  Test code used while debug.
 *
@@ -17,9 +17,9 @@
 *
 *******************************************************************************/
 #include "global.h"
+#include "ntldr.h"
 #include <intrin.h>
 #include <aclapi.h>
-
 
 HANDLE g_TestIoCompletion = NULL, g_TestTransaction = NULL;
 HANDLE g_TestNamespace = NULL, g_TestMutex = NULL;
@@ -28,12 +28,97 @@ HANDLE g_DebugObject = NULL;
 HANDLE g_TestJob = NULL;
 HDESK g_TestDesktop = NULL;
 HANDLE g_TestThread = NULL;
+HANDLE g_TestPortThread = NULL;
+HANDLE g_PortHandle;
 
+typedef struct _LPC_USER_MESSAGE {
+    PORT_MESSAGE	Header;
+    BYTE			Data[128];
+} LPC_USER_MESSAGE, *PLPC_USER_MESSAGE;
+
+typedef struct _QUERY_REQUEST {
+    ULONG	Data;
+} QUERY_REQUEST, *PQUERY_REQUEST;
+
+#define WOBJEX_TEST_PORT L"\\Rpc Control\\WinObjEx_ServiceTestPort48429"
+
+DWORD WINAPI LPCListener(LPVOID lpThreadParameter)
+{
+    NTSTATUS Status;
+    LPC_USER_MESSAGE UserMessage;
+    PQUERY_REQUEST QueryRequest;
+
+    UNICODE_STRING PortName = RTL_CONSTANT_STRING(WOBJEX_TEST_PORT);
+    OBJECT_ATTRIBUTES ObjectAttributes;
+
+    HANDLE ConnectPort;
+
+    UNREFERENCED_PARAMETER(lpThreadParameter);
+
+    InitializeObjectAttributes(&ObjectAttributes, &PortName, OBJ_CASE_INSENSITIVE, NULL, NULL);
+
+    Status = NtCreatePort(&g_PortHandle,
+        &ObjectAttributes,
+        0,
+        sizeof(LPC_USER_MESSAGE),
+        0);
+
+    if (!NT_SUCCESS(Status)) {
+        ExitThread(0);
+    }
+
+    do {
+
+        RtlSecureZeroMemory(&UserMessage, sizeof(UserMessage));
+        if (!NT_SUCCESS(NtListenPort(g_PortHandle, &UserMessage.Header)))
+            break;
+
+        ConnectPort = NULL;
+        if (!NT_SUCCESS(NtAcceptConnectPort(&ConnectPort,
+            NULL,
+            &UserMessage.Header,
+            TRUE,
+            NULL,
+            NULL)))
+        {
+            break;
+        }
+
+        if (NT_SUCCESS(NtCompleteConnectPort(ConnectPort))) {
+
+            __try {
+
+                RtlSecureZeroMemory(&UserMessage, sizeof(UserMessage));
+                NtReplyWaitReceivePort(ConnectPort, NULL, NULL, &UserMessage.Header);
+
+                QueryRequest = (PQUERY_REQUEST)&UserMessage.Data;
+                DbgPrint("Data=%lx", QueryRequest->Data);
+                if (QueryRequest->Data == 1)
+                    break;
+
+            }
+            __except (EXCEPTION_EXECUTE_HANDLER) {
+                DbgPrint("ListenerException%lx", GetExceptionCode());
+            }
+
+        }
+
+        NtClose(ConnectPort);
+
+    } while (TRUE);
+
+    NtClose(g_PortHandle);
+
+    ExitThread(0);
+}
 
 VOID TestApiPort(
     VOID
 )
 {
+    DWORD tid;
+    g_TestPortThread = CreateThread(NULL, 0,
+        (LPTHREAD_START_ROUTINE)LPCListener, NULL, 0, &tid);
 }
 
 VOID TestDebugObject(
@@ -521,7 +606,7 @@ VOID TestApiSetResolve()
     UNICODE_STRING ParentLibrary;
     UNICODE_STRING ResolvedHostLibrary;
 
-    supApiSetLoadFromPeb(&Version, &Data);
+    NtLdrApiSetLoadFromPeb(&Version, &Data);
 
     LPWSTR ToResolve[11] = {
         L"api-ms-win-nevedomaya-ebanaya-hyinua-l1-1-3.dll",
@@ -541,7 +626,7 @@ VOID TestApiSetResolve()
     for (i = 0; i < 11; i++) {
         RtlInitUnicodeString(&ApiSetLibrary, ToResolve[i]);
 
-        Status = supApiSetResolveLibrary(Data,
+        Status = NtLdrApiSetResolveLibrary(Data,
             &ApiSetLibrary,
             NULL,
             &Resolved,
@@ -549,7 +634,7 @@ VOID TestApiSetResolve()
 
         if (NT_SUCCESS(Status)) {
             if (Resolved) {
-                DbgPrint("Resolved apiset %wZ\r\n", ResolvedHostLibrary);
+                DbgPrint("%wZ\r\n", ResolvedHostLibrary);
                 RtlFreeUnicodeString(&ResolvedHostLibrary);
             }
             else {
@@ -557,14 +642,14 @@ VOID TestApiSetResolve()
             }
         }
         else {
-            DbgPrint("supApiSetResolveLibrary failed 0x%lx\r\n", Status);
+            DbgPrint("NtLdrApiSetResolveLibrary failed 0x%lx\r\n", Status);
         }
     }
 
     RtlInitUnicodeString(&ParentLibrary, L"kernel32.dll");
     RtlInitUnicodeString(&ApiSetLibrary, L"api-ms-win-core-processsecurity-l1-1-0.dll");
 
-    Status = supApiSetResolveLibrary(Data,
+    Status = NtLdrApiSetResolveLibrary(Data,
         &ApiSetLibrary,
         &ParentLibrary,
         &Resolved,
@@ -580,7 +665,7 @@ VOID TestApiSetResolve()
         }
     }
     else {
-        DbgPrint("supApiSetResolveLibrary failed 0x%lx\r\n", Status);
+        DbgPrint("NtLdrApiSetResolveLibrary failed 0x%lx\r\n", Status);
     }
 }
 
@@ -636,5 +721,9 @@ VOID TestStop(
     if (g_TestThread) {
         TerminateThread(g_TestThread, 0);
         CloseHandle(g_TestThread);
+    }
+    if (g_TestPortThread) {
+        TerminateThread(g_TestPortThread, 0);
+        CloseHandle(g_TestPortThread);
     }
 }

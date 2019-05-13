@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        07 May 2019
+*  DATE:        08 May 2019
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -15,9 +15,10 @@
 *
 *******************************************************************************/
 #include "global.h"
-#include "hde\hde64.h"
+#include "hde/hde64.h"
 #include "extras.h"
 #include "extrasSSDT.h"
+#include "ntos/ntldr.h"
 
 PSERVICETABLEENTRY g_pSDT = NULL;
 ULONG g_SDTLimit = 0;
@@ -41,7 +42,7 @@ INT CALLBACK SdtDlgCompareFunc(
     _In_ LPARAM lParamSort //pointer to EXTRASCALLBACK
 )
 {
-    INT       nResult = 0;
+    INT nResult = 0;
 
     EXTRASCONTEXT *pDlgContext;
     EXTRASCALLBACK *CallbackParam = (EXTRASCALLBACK*)lParamSort;
@@ -605,261 +606,6 @@ VOID SdtListTable(
     }
 }
 
-
-/*
-*
-*  W32pServiceTable query related structures and definitions.
-*
-*/
-
-typedef struct _LOAD_MODULE_ENTRY {
-    HMODULE hModule;
-    struct _LOAD_MODULE_ENTRY *Next;
-} LOAD_MODULE_ENTRY, *PLOAD_MODULE_ENTRY;
-
-typedef struct _WIN32_SHADOWTABLE {
-    ULONG Index;
-    CHAR Name[256];
-    ULONG_PTR KernelStubAddress;
-    ULONG_PTR KernelStubTargetAddress;
-    struct _WIN32_SHADOWTABLE *NextService;
-} WIN32_SHADOWTABLE, *PWIN32_SHADOWTABLE;
-
-typedef enum _RESOLVE_POINTER_TYPE {
-    ForwarderString = 0,
-    FunctionCode = 1
-} RESOLVE_POINTER_TYPE;
-
-typedef struct _RESOLVE_INFO {
-    RESOLVE_POINTER_TYPE ResultType;
-    union {
-        LPCSTR ForwarderName;
-        LPVOID Function;
-    };
-} RESOLVE_INFO, *PRESOLVE_INFO;
-
-/*
-* NtRawGetProcAddress
-*
-* Purpose:
-*
-* Custom GPA.
-*
-*/
-NTSTATUS NtRawGetProcAddress(
-    _In_ LPVOID Module,
-    _In_ LPCSTR ProcName,
-    _In_ PRESOLVE_INFO Pointer
-)
-{
-    PIMAGE_NT_HEADERS           NtHeaders;
-    PIMAGE_EXPORT_DIRECTORY     exp;
-    PDWORD                      fntable, nametable;
-    PWORD                       ordtable;
-    ULONG                       mid, high, low;
-    ULONG_PTR                   fnptr, exprva, expsize;
-    int                         r;
-
-    NtHeaders = RtlImageNtHeader(Module);
-    if (NtHeaders->OptionalHeader.NumberOfRvaAndSizes <= IMAGE_DIRECTORY_ENTRY_EXPORT)
-        return STATUS_OBJECT_NAME_NOT_FOUND;
-
-    exprva = NtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
-    expsize = NtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size;
-
-    exp = (PIMAGE_EXPORT_DIRECTORY)((ULONG_PTR)Module + exprva);
-    fntable = (PDWORD)((ULONG_PTR)Module + exp->AddressOfFunctions);
-
-    if ((ULONG_PTR)ProcName < 0x10000) {
-        // ProcName is ordinal
-        if (
-            ((ULONG_PTR)ProcName < (ULONG_PTR)exp->Base) ||
-            ((ULONG_PTR)ProcName >= (ULONG_PTR)exp->Base + exp->NumberOfFunctions))
-            return STATUS_OBJECT_NAME_NOT_FOUND;
-
-        fnptr = fntable[(ULONG_PTR)ProcName - exp->Base];
-
-    }
-    else {
-        // ProcName is ANSI string
-        nametable = (PDWORD)((ULONG_PTR)Module + exp->AddressOfNames);
-        ordtable = (PWORD)((ULONG_PTR)Module + exp->AddressOfNameOrdinals);
-
-        if (exp->NumberOfNames == 0)
-            return STATUS_OBJECT_NAME_NOT_FOUND;
-
-        low = 0;
-        high = exp->NumberOfNames;
-
-        do {
-            mid = low + (high - low) / 2;
-            r = _strcmp_a(ProcName, (LPCSTR)((ULONG_PTR)Module + nametable[mid]));
-
-            if (r > 0)
-            {
-                low = mid + 1;
-            }
-            else
-            {
-                if (r < 0)
-                    high = mid;
-                else
-                    break;
-            }
-        } while (low < high);
-
-        if (r == 0)
-            fnptr = fntable[ordtable[mid]];
-        else
-            return STATUS_OBJECT_NAME_NOT_FOUND;
-    }
-
-    if ((fnptr >= exprva) && (fnptr < exprva + expsize))
-        Pointer->ResultType = ForwarderString;
-    else
-        Pointer->ResultType = FunctionCode;
-
-    Pointer->Function = (LPVOID)((ULONG_PTR)Module + fnptr);
-    return STATUS_SUCCESS;
-}
-
-/*
-* NtRawEnumExports
-*
-* Purpose:
-*
-* Enumerate module exports to the table.
-*
-*/
-_Success_(return != 0)
-ULONG NtRawEnumExports(
-    _In_ HANDLE HeapHandle,
-    _In_ LPVOID Module,
-    _Out_ PWIN32_SHADOWTABLE* Table
-)
-{
-    PIMAGE_NT_HEADERS           NtHeaders;
-    PIMAGE_EXPORT_DIRECTORY		exp;
-    PDWORD						FnPtrTable, NameTable;
-    PWORD						NameOrdTable;
-    ULONG_PTR					fnptr, exprva, expsize;
-    ULONG						c, n, result;
-    PWIN32_SHADOWTABLE			NewEntry;
-
-    NtHeaders = RtlImageNtHeader(Module);
-    if (NtHeaders->OptionalHeader.NumberOfRvaAndSizes <= IMAGE_DIRECTORY_ENTRY_EXPORT)
-        return 0;
-
-    exprva = NtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
-    if (exprva == 0)
-        return 0;
-
-    expsize = NtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size;
-
-    exp = (PIMAGE_EXPORT_DIRECTORY)((ULONG_PTR)Module + exprva);
-    FnPtrTable = (PDWORD)((ULONG_PTR)Module + exp->AddressOfFunctions);
-    NameTable = (PDWORD)((ULONG_PTR)Module + exp->AddressOfNames);
-    NameOrdTable = (PWORD)((ULONG_PTR)Module + exp->AddressOfNameOrdinals);
-
-    result = 0;
-
-    for (c = 0; c < exp->NumberOfFunctions; ++c)
-    {
-        fnptr = (ULONG_PTR)Module + FnPtrTable[c];
-        if (*(PDWORD)fnptr != 0xb8d18b4c)
-            continue;
-
-        NewEntry = (PWIN32_SHADOWTABLE)RtlAllocateHeap(HeapHandle,
-            HEAP_ZERO_MEMORY, sizeof(WIN32_SHADOWTABLE));
-
-        if (NewEntry == NULL)
-            break;
-
-        NewEntry->Index = *(PDWORD)(fnptr + 4);
-
-        for (n = 0; n < exp->NumberOfNames; ++n)
-        {
-            if (NameOrdTable[n] == c)
-            {
-                _strncpy_a(&NewEntry->Name[0],
-                    sizeof(NewEntry->Name),
-                    (LPCSTR)((ULONG_PTR)Module + NameTable[n]),
-                    sizeof(NewEntry->Name));
-
-                break;
-            }
-        }
-
-        ++result;
-
-        *Table = NewEntry;
-        Table = &NewEntry->NextService;
-    }
-
-    return result;
-}
-
-/*
-* IATEntryToImport
-*
-* Purpose:
-*
-* Resolve function name.
-*
-*/
-_Success_(return != NULL)
-LPCSTR IATEntryToImport(
-    _In_ LPVOID Module,
-    _In_ LPVOID IATEntry,
-    _Out_opt_ LPCSTR *ImportModuleName
-)
-{
-    PIMAGE_NT_HEADERS           NtHeaders;
-    PIMAGE_IMPORT_DESCRIPTOR    impd;
-    ULONG_PTR                   *rname, imprva;
-    LPVOID                      *raddr;
-
-    if (ImportModuleName)
-        *ImportModuleName = NULL;
-
-    NtHeaders = RtlImageNtHeader(Module);
-    if (NtHeaders->OptionalHeader.NumberOfRvaAndSizes <= IMAGE_DIRECTORY_ENTRY_IMPORT)
-        return NULL;
-
-    imprva = NtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
-    if (imprva == 0)
-        return NULL;
-
-    impd = (PIMAGE_IMPORT_DESCRIPTOR)((ULONG_PTR)Module + imprva);
-
-    while (impd->Name != 0) {
-        raddr = (LPVOID *)((ULONG_PTR)Module + impd->FirstThunk);
-        if (impd->OriginalFirstThunk == 0)
-            rname = (ULONG_PTR *)raddr;
-        else
-            rname = (ULONG_PTR *)((ULONG_PTR)Module + impd->OriginalFirstThunk);
-
-        while (*rname != 0) {
-            if (IATEntry == raddr)
-            {
-                if (((*rname) & IMAGE_ORDINAL_FLAG) == 0)
-                {
-                    if (ImportModuleName) {
-                        *ImportModuleName = (LPCSTR)((ULONG_PTR)Module + impd->Name);
-                    }
-                    return (LPCSTR)&((PIMAGE_IMPORT_BY_NAME)((ULONG_PTR)Module + *rname))->Name;
-                }
-            }
-
-            ++rname;
-            ++raddr;
-        }
-        ++impd;
-    }
-
-    return NULL;
-}
-
 /*
 * SdtListTableShadow
 *
@@ -1004,7 +750,7 @@ VOID SdtListTableShadow(
             //
             if (NeedApiSetResolve) {
 
-                if (!supApiSetLoadFromPeb(&ApiSetSchemaVersion, (PVOID*)&ApiSetMap)) {
+                if (!NtLdrApiSetLoadFromPeb(&ApiSetSchemaVersion, (PVOID*)&ApiSetMap)) {
                     MessageBox(hwndDlg, TEXT("ApiSetSchema map not found"), NULL, MB_ICONERROR);
                     __leave;
                 }
@@ -1058,7 +804,7 @@ VOID SdtListTableShadow(
                             jmpaddr = *(PLONG32)(fptr + (hs.len - 4)); // retrieve the offset
                             fptr = fptr + hs.len + jmpaddr; // hs.len -> length of jmp instruction
 
-                            FunctionName = IATEntryToImport(w32k, fptr, &ModuleName);
+                            FunctionName = NtRawIATEntryToImport(w32k, fptr, &ModuleName);
                             if (FunctionName == NULL) {
                                 OutputDebugString(TEXT("SdtListTableShadow, could not resolve function name\r\n"));
                                 break;
@@ -1083,7 +829,7 @@ VOID SdtListTableShadow(
                                     //
                                     // Resolve ApiSet.
                                     //
-                                    if (NT_SUCCESS(supApiSetResolveLibrary(ApiSetMap,
+                                    if (NT_SUCCESS(NtLdrApiSetResolveLibrary(ApiSetMap,
                                         &usModuleName,
                                         NULL,
                                         &ResolvedResult,

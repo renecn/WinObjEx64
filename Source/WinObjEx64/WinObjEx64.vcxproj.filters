@@ -207,6 +207,9 @@
     <ClCompile Include="wine.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ntos\ntldr.c">
+      <Filter>ntos</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc">
@@ -359,6 +362,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ntos\apisetx.h">
+      <Filter>ntos</Filter>
+    </ClInclude>
+    <ClInclude Include="ntos\ntldr.h">
       <Filter>ntos</Filter>
     </ClInclude>
   </ItemGroup>

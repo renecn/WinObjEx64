@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        03 May 2019
+*  DATE:        08 May 2019
 *
 *  MINIMUM SUPPORTED OS WINDOWS 7
 *
@@ -1443,8 +1443,7 @@ POBJINFO ObpCopyObjectBasicInfo(
             NULL))
         {
 #ifdef _DEBUG
-            OutputDebugStringA(__FUNCTION__);
-            OutputDebugStringA("kdReadSystemMemoryEx(ObjectHeaderAddress) failed");
+            DbgPrint("%s kdReadSystemMemoryEx(ObjectHeaderAddress) failed\r\n", __FUNCTION__);
 #endif
 
             return NULL;
@@ -1540,8 +1539,7 @@ POBJINFO ObpWalkDirectory(
         {
 
 #ifdef _DEBUG
-            OutputDebugStringA(__FUNCTION__);
-            OutputDebugStringA("kdReadSystemMemoryEx(DirectoryAddress) failed");
+            DbgPrint("%s kdReadSystemMemoryEx(DirectoryAddress) failed\r\n", __FUNCTION__);
 #endif
             return NULL;
         }
@@ -1585,8 +1583,7 @@ POBJINFO ObpWalkDirectory(
                         NULL))
                     {
 #ifdef _DEBUG
-                        OutputDebugStringA(__FUNCTION__);
-                        OutputDebugStringA("kdReadSystemMemoryEx(OBJECT_DIRECTORY_ENTRY(HashEntry)) failed");
+                        DbgPrint("%s kdReadSystemMemoryEx(OBJECT_DIRECTORY_ENTRY(HashEntry)) failed\r\n", __FUNCTION__);
 #endif
                         break;
                     }
@@ -1604,8 +1601,7 @@ POBJINFO ObpWalkDirectory(
                         NULL))
                     {
 #ifdef _DEBUG
-                        OutputDebugStringA(__FUNCTION__);
-                        OutputDebugStringA("kdReadSystemMemoryEx(ObjectHeaderAddress(Entry.Object)) failed");
+                        DbgPrint("%s kdReadSystemMemoryEx(ObjectHeaderAddress(Entry.Object)) failed\r\n", __FUNCTION__);
 #endif
                         goto NextItem;
                     }
@@ -1699,8 +1695,7 @@ POBJINFO ObQueryObjectByAddress(
         NULL))
     {
 #ifdef _DEBUG
-        OutputDebugStringA(__FUNCTION__);
-        OutputDebugStringA("\r\nkdReadSystemMemoryEx(ObjectHeaderAddress(ObjectAddress)) failed");
+        DbgPrint("%s kdReadSystemMemoryEx(ObjectHeaderAddress(ObjectAddress)) failed\r\n", __FUNCTION__);
 #endif
         return NULL;
     }
@@ -1853,8 +1848,7 @@ VOID ObpWalkDirectoryRecursive(
         NULL))
     {
 #ifdef _DEBUG
-        OutputDebugStringA(__FUNCTION__);
-        OutputDebugStringA("kdReadSystemMemoryEx(DirectoryAddress) failed");
+        DbgPrint("%s kdReadSystemMemoryEx(DirectoryAddress) failed\r\n", __FUNCTION__);
 #endif
         return;
     }

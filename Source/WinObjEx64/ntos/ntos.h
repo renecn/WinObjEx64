@@ -4,9 +4,9 @@
 *
 *  TITLE:       NTOS.H
 *
-*  VERSION:     1.112
+*  VERSION:     1.113
 *
-*  DATE:        03 May 2019
+*  DATE:        08 May 2019
 *
 *  Common header file for the ntos API functions and definitions.
 *
@@ -7522,6 +7522,15 @@ ULONG
 STDAPIVCALLTYPE
 DbgPrint(
     _In_z_ _Printf_format_string_ PCH Format,
+    ...);
+
+NTSYSAPI
+ULONG
+STDAPIVCALLTYPE
+DbgPrintEx(
+    _In_ ULONG ComponentId,
+    _In_ ULONG Level,
+    _In_z_ _Printf_format_string_ PSTR Format,
     ...);
 
 NTSYSAPI

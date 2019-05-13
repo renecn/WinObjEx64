@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        03 May 2019
+*  DATE:        08 May 2019
 *
 *  Common header file for the program support routines.
 *
@@ -577,15 +577,3 @@ BOOL supPHLCreate(
     _In_ PBYTE ProcessList,
     _Out_ PULONG NumberOfProcesses,
     _Out_ PULONG NumberOfThreads);
-
-_Success_(return == STATUS_SUCCESS)
-NTSTATUS supApiSetResolveLibrary(
-    _In_ PVOID Namespace,
-    _In_ PUNICODE_STRING ApiSetToResolve,
-    _In_opt_ PUNICODE_STRING ApiSetParentName,
-    _Out_ PBOOL Resolved,
-    _Out_ PUNICODE_STRING ResolvedHostLibraryName);
-
-BOOLEAN supApiSetLoadFromPeb(
-    _Out_ PULONG SchemaVersion,
-    _Out_ PVOID* DataPointer);
