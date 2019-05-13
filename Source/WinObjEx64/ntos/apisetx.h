@@ -4,9 +4,9 @@
 *
 *  TITLE:       APISETX.H
 *
-*  VERSION:     1.05
+*  VERSION:     1.06
 *
-*  DATE:        08 May 2019
+*  DATE:        11 May 2019
 *
 *  Common header file for the ApiSetSchema definitions.
 *
@@ -59,7 +59,7 @@
 #define API_SET_SCHEMA_VERSION_V4    4
 #define API_SET_SCHEMA_VERSION_V6    6
 
-#define APISET_EMPTY_NAMESPACE_VALUE(ValueEntry) \
+#define API_SET_EMPTY_NAMESPACE_VALUE(ValueEntry) \
     ((ValueEntry->ValueOffset == 0) && (ValueEntry->ValueLength == 0) && \
     (ValueEntry->NameOffset == 0) && (ValueEntry->NameLength == 0))
 
@@ -68,19 +68,19 @@
 //
 // Macro for APISET structures.
 //
-#define APISET_TO_VALUE_ENTRY(Namespace, Entry, Index) \
+#define API_SET_TO_VALUE_ENTRY(Namespace, Entry, Index) \
     ((API_SET_VALUE_ENTRY_V6 *)RtlOffsetToPointer(Namespace, Index * sizeof(API_SET_VALUE_ENTRY_V6) + Entry->DataOffset))
 
-#define APISET_TO_VALUE_NAME(Namespace, Entry) \
+#define API_SET_TO_VALUE_NAME(Namespace, Entry) \
     ((PWCHAR)RtlOffsetToPointer(Namespace, Entry->NameOffset))
 
-#define APISET_TO_HASH_ENTRY(Namespace, HashIndex) \
+#define API_SET_TO_HASH_ENTRY(Namespace, HashIndex) \
    ((API_SET_HASH_ENTRY_V6*)RtlOffsetToPointer(Namespace, Namespace->NamespaceHashesOffset + sizeof(ULONG_PTR) * HashIndex))
 
-#define APISET_TO_NAMESPACE_ENTRY(Namespace, LookupHashEntry) \
+#define API_SET_TO_NAMESPACE_ENTRY(Namespace, LookupHashEntry) \
    ((PAPI_SET_NAMESPACE_ENTRY_V6)RtlOffsetToPointer(Namespace, LookupHashEntry->NamespaceIndex * sizeof(API_SET_NAMESPACE_ENTRY_V6) + Namespace->NamespaceEntryOffset))
 
-#define APISET_TO_NAMESPACE_ENTRY_NAME(Namespace, NamespaceEntry) \
+#define API_SET_TO_NAMESPACE_ENTRY_NAME(Namespace, NamespaceEntry) \
    ((PWCHAR)RtlOffsetToPointer(Namespace, NamespaceEntry->NameOffset))
 
 // V2

@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        08 May 2019
+*  DATE:        11 May 2019
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -834,7 +834,7 @@ PVOID supGetSystemInfo(
 {
     INT         c = 0;
     PVOID       Buffer = NULL;
-    ULONG       Size = 0x1000;
+    ULONG       Size = PAGE_SIZE;
     NTSTATUS    status;
     ULONG       memIO = 0;
 
@@ -5453,4 +5453,121 @@ BOOL supPHLCreate(
     *NumberOfProcesses = numberOfProcesses;
 
     return ((numberOfProcesses > 0) && (numberOfThreads > 0));
+}
+
+/*
+* supxEnumerateSLCacheValueDescriptors
+*
+* Purpose:
+*
+* Walk each SL cache value descriptor entry, validate it and run optional callback.
+*
+*/
+NTSTATUS supxEnumerateSLCacheValueDescriptors(
+    _In_ SL_KMEM_CACHE *Cache,
+    _In_opt_ PENUMERATE_SL_CACHE_VALUE_DESCRIPTORS_CALLBACK Callback,
+    _In_opt_ PVOID Context
+)
+{
+    ULONG_PTR CurrentPosition, MaxPosition;
+    SL_KMEM_CACHE_VALUE_DESCRIPTOR *CacheDescriptor;
+
+    __try {
+
+        if (Cache->TotalSize < sizeof(SL_KMEM_CACHE))
+            return STATUS_INVALID_PARAMETER;
+
+        if (Cache->Version != 1)
+            return STATUS_INVALID_PARAMETER;
+
+        MaxPosition = (ULONG_PTR)RtlOffsetToPointer(Cache, Cache->TotalSize);
+        if (MaxPosition < (ULONG_PTR)MaxPosition)
+            return STATUS_INVALID_PARAMETER;
+
+        CacheDescriptor = (SL_KMEM_CACHE_VALUE_DESCRIPTOR*)&Cache->Descriptors;
+        CurrentPosition = (ULONG_PTR)CacheDescriptor;
+        MaxPosition = (ULONG_PTR)RtlOffsetToPointer(CacheDescriptor, Cache->SizeOfData);
+
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER) {
+        return GetExceptionCode();
+    }
+
+    do {
+
+        if (Callback) {
+            if (Callback(CacheDescriptor, Context))
+                break;
+        }
+
+        __try {
+
+            CurrentPosition += CacheDescriptor->Size;
+            if (CurrentPosition >= MaxPosition)
+                break;
+
+            CacheDescriptor = (SL_KMEM_CACHE_VALUE_DESCRIPTOR*)RtlOffsetToPointer(CacheDescriptor, CacheDescriptor->Size);
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER) {
+            return GetExceptionCode();
+        }
+
+    } while (TRUE);
+
+    return STATUS_SUCCESS;
+}
+
+/*
+* supListLicenseCache
+*
+* Purpose:
+*
+* Read license cache and walk it value descriptors.
+*
+*/
+BOOLEAN supListLicenseCache(
+    _In_opt_ PENUMERATE_SL_CACHE_VALUE_DESCRIPTORS_CALLBACK Callback,
+    _In_opt_ PVOID Context)
+{
+    BOOLEAN bResult = FALSE;
+    NTSTATUS Status;
+    ULONG DataLength = 0;
+    HANDLE KeyHandle = NULL;
+    UNICODE_STRING ProductPolicyValue = RTL_CONSTANT_STRING(L"ProductPolicy");
+    UNICODE_STRING ProductOptionsKey = RTL_CONSTANT_STRING(L"\\REGISTRY\\MACHINE\\System\\CurrentControlSet\\Control\\ProductOptions");
+    OBJECT_ATTRIBUTES ObjectAttributes;
+
+    KEY_VALUE_PARTIAL_INFORMATION *PolicyData;
+    SL_KMEM_CACHE *Cache;
+
+    InitializeObjectAttributes(&ObjectAttributes, &ProductOptionsKey, OBJ_CASE_INSENSITIVE, NULL, NULL);
+    Status = NtOpenKey(&KeyHandle, KEY_READ, &ObjectAttributes);
+    if (!NT_SUCCESS(Status))
+        return FALSE;
+
+    Status = NtQueryValueKey(KeyHandle, &ProductPolicyValue,
+        KeyValuePartialInformation, NULL, 0, &DataLength);
+
+    if (Status == STATUS_BUFFER_TOO_SMALL) {
+        PolicyData = (KEY_VALUE_PARTIAL_INFORMATION*)supHeapAlloc(DataLength);
+        if (PolicyData) {
+
+            Status = NtQueryValueKey(KeyHandle, &ProductPolicyValue,
+                KeyValuePartialInformation, PolicyData, DataLength, &DataLength);
+
+            if (NT_SUCCESS(Status) && (PolicyData->Type == REG_BINARY)) {
+
+                Cache = (SL_KMEM_CACHE*)PolicyData->Data;
+
+                bResult = NT_SUCCESS(supxEnumerateSLCacheValueDescriptors(Cache, Callback, Context));
+
+            }
+
+            supHeapFree(PolicyData);
+        }
+    }
+
+    NtClose(KeyHandle);
+
+    return bResult;
 }

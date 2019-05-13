@@ -608,7 +608,8 @@ VOID TestApiSetResolve()
 
     NtLdrApiSetLoadFromPeb(&Version, &Data);
 
-    LPWSTR ToResolve[11] = {
+    LPWSTR ToResolve[12] = {
+        L"hui-ms-win-core-app-l1-2-3.dll",
         L"api-ms-win-nevedomaya-ebanaya-hyinua-l1-1-3.dll",
         L"api-ms-win-core-appinit-l1-1-0.dll",
         L"api-ms-win-core-com-private-l1-2-0",
@@ -623,7 +624,7 @@ VOID TestApiSetResolve()
     };
 
 
-    for (i = 0; i < 11; i++) {
+    for (i = 0; i < 12; i++) {
         RtlInitUnicodeString(&ApiSetLibrary, ToResolve[i]);
 
         Status = NtLdrApiSetResolveLibrary(Data,
@@ -669,6 +670,54 @@ VOID TestApiSetResolve()
     }
 }
 
+BOOL CALLBACK EnumerateSLValueDescriptorCallback(
+    _In_ SL_KMEM_CACHE_VALUE_DESCRIPTOR *CacheDescriptor,
+    _In_opt_ PVOID Context
+)
+{
+    WCHAR *EntryName;
+    CHAR *EntryType;
+
+    UNREFERENCED_PARAMETER(Context);
+
+    EntryName = (PWCHAR)supHeapAlloc(CacheDescriptor->NameLength + sizeof(WCHAR));
+    if (EntryName) {
+
+        RtlCopyMemory(EntryName, CacheDescriptor->Name, CacheDescriptor->NameLength);
+
+        switch (CacheDescriptor->Type) {
+        case SL_DATA_SZ:
+            EntryType = "SL_DATA_SZ";
+            break;
+        case SL_DATA_DWORD:
+            EntryType = "SL_DATA_DWORD";
+            break;
+        case SL_DATA_BINARY:
+            EntryType = "SL_DATA_BINARY";
+            break;
+        case SL_DATA_MULTI_SZ:
+            EntryType = "SL_DATA_MULTI_SZ";
+            break;
+        case SL_DATA_SUM:
+            EntryType = "SL_DATA_SUM";
+            break;
+
+        default:
+            EntryType = "Unknown";
+        }
+
+        DbgPrint("%ws, %s\r\n", EntryName, EntryType);
+        supHeapFree(EntryName);
+
+    }
+    return FALSE;
+}
+
+VOID TestLicenseCache()
+{
+    supListLicenseCache(EnumerateSLValueDescriptorCallback, NULL);
+}
+
 VOID TestCall()
 {
 }
@@ -678,6 +727,7 @@ VOID TestStart(
 )
 {
     //TestPsObjectSecurity();
+    TestLicenseCache();
     TestApiSetResolve();
     TestDesktop();
     TestCall();

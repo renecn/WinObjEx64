@@ -6,11 +6,12 @@
 *
 *  VERSION:     1.12
 *
-*  DATE:        08 May 2019
+*  DATE:        11 May 2019
 *
 *  NT loader related code.
 *
 *  Depends on:    ntos.h
+*                 apisetx.h
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -113,7 +114,7 @@ NTSTATUS NtRawGetProcAddress(
 *
 * Purpose:
 *
-* Enumerate module exports to the table.
+* Enumerate win32k module exports to the table.
 *
 */
 _Success_(return != 0)
@@ -266,7 +267,7 @@ PAPI_SET_VALUE_ENTRY_V6 ApiSetpSearchForApiSetHost(
     PWCHAR AliasName;
     LONG CompareResult;
 
-    ValueEntry = APISET_TO_VALUE_ENTRY(Namespace, Entry, 0);
+    ValueEntry = API_SET_TO_VALUE_ENTRY(Namespace, Entry, 0);
     AliasCount = Entry->Count;
 
     if (AliasCount >= 1) {
@@ -275,8 +276,8 @@ PAPI_SET_VALUE_ENTRY_V6 ApiSetpSearchForApiSetHost(
 
         do {
             AliasIndex = (AliasCount + i) >> 1;
-            AliasValueEntry = APISET_TO_VALUE_ENTRY(Namespace, Entry, AliasIndex);
-            AliasName = APISET_TO_VALUE_NAME(Namespace, AliasValueEntry);
+            AliasValueEntry = API_SET_TO_VALUE_ENTRY(Namespace, Entry, AliasIndex);
+            AliasName = API_SET_TO_VALUE_NAME(Namespace, AliasValueEntry);
 
             CompareResult = RtlCompareUnicodeStrings(ApiSetToResolve,
                 ApiSetToResolveLength,
@@ -290,7 +291,7 @@ PAPI_SET_VALUE_ENTRY_V6 ApiSetpSearchForApiSetHost(
             else {
                 if (CompareResult == 0) {
 
-                    Result = APISET_TO_VALUE_ENTRY(Namespace,
+                    Result = API_SET_TO_VALUE_ENTRY(Namespace,
                         Entry,
                         ((AliasCount + i) >> 1));
 
@@ -350,7 +351,7 @@ PAPI_SET_NAMESPACE_ENTRY_V6 ApiSetpSearchForApiSet(
 
         HashIndex = (EntryCount + c) >> 1;
 
-        LookupHashEntry = APISET_TO_HASH_ENTRY(ApiSetNamespace, HashIndex);
+        LookupHashEntry = API_SET_TO_HASH_ENTRY(ApiSetNamespace, HashIndex);
         EntryHash = LookupHashEntry->Hash;
 
         if (LookupHash < EntryHash) {
@@ -364,7 +365,7 @@ PAPI_SET_NAMESPACE_ENTRY_V6 ApiSetpSearchForApiSet(
             //
             // Hash found, query namespace entry and break.
             //
-            NamespaceEntry = APISET_TO_NAMESPACE_ENTRY(ApiSetNamespace, LookupHashEntry);
+            NamespaceEntry = API_SET_TO_NAMESPACE_ENTRY(ApiSetNamespace, LookupHashEntry);
             break;
         }
 
@@ -381,7 +382,7 @@ PAPI_SET_NAMESPACE_ENTRY_V6 ApiSetpSearchForApiSet(
     //
     // Verify entry name.
     //
-    NamespaceEntryName = APISET_TO_NAMESPACE_ENTRY_NAME(ApiSetNamespace, NamespaceEntry);
+    NamespaceEntryName = API_SET_TO_NAMESPACE_ENTRY_NAME(ApiSetNamespace, NamespaceEntry);
 
     if (RtlCompareUnicodeStrings(ResolveName,
         ResolveNameEffectiveLength,
@@ -487,7 +488,7 @@ NTSTATUS NtLdrApiSetResolveLibrary(
             // If resolved apiset entry has value check it out.
             //
             if (ResolvedEntry->Count > 0) {
-                HostLibraryEntry = APISET_TO_VALUE_ENTRY(Namespace, ResolvedEntry, 0);
+                HostLibraryEntry = API_SET_TO_VALUE_ENTRY(Namespace, ResolvedEntry, 0);
             }
         }
 
@@ -495,7 +496,7 @@ NTSTATUS NtLdrApiSetResolveLibrary(
         // Set output parameter if host library resolved.
         //
         if (HostLibraryEntry) {
-            if (!APISET_EMPTY_NAMESPACE_VALUE(HostLibraryEntry)) {
+            if (!API_SET_EMPTY_NAMESPACE_VALUE(HostLibraryEntry)) {
 
                 IsResolved = TRUE;
 

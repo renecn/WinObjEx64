@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        08 May 2019
+*  DATE:        11 May 2019
 *
 *  Common header file for the Windows Object Explorer.
 *
@@ -61,6 +61,7 @@
 #include <ShlObj.h>
 #include <ntstatus.h>
 #include <sddl.h>
+#include <slpublic.h>
 #include "resource.h"
 #include "extdef.h"
 #include "wine.h"

@@ -4,9 +4,9 @@
 *
 *  TITLE:       NTOS.H
 *
-*  VERSION:     1.113
+*  VERSION:     1.114
 *
-*  DATE:        08 May 2019
+*  DATE:        11 May 2019
 *
 *  Common header file for the ntos API functions and definitions.
 *
@@ -5582,6 +5582,53 @@ typedef struct _ESERVERSILO_GLOBALS {
 /*
 ** SILO END
 */
+
+/*
+** SOFTWARE LICENSING START
+*/
+#pragma pack(push, 1)
+typedef struct _SL_CACHE_VALUE_DESCRIPTOR {
+    USHORT Size;
+    USHORT NameLength;
+    USHORT Type;
+    USHORT DataLength;
+    ULONG Attributes;
+    ULONG Reserved;
+    WCHAR Name[ANYSIZE_ARRAY];
+} SL_CACHE_VALUE_DESCRIPTOR, *PSL_CACHE_VALUE_DESCRIPTOR;
+typedef SL_CACHE_VALUE_DESCRIPTOR SL_KMEM_CACHE_VALUE_DESCRIPTOR;
+#pragma pack(pop)
+
+typedef struct _SL_CACHE {
+    ULONG TotalSize;
+    ULONG SizeOfData;
+    ULONG SignatureSize;
+    ULONG Flags;
+    ULONG Version;
+    SL_KMEM_CACHE_VALUE_DESCRIPTOR Descriptors[ANYSIZE_ARRAY];
+} SL_CACHE, *PSL_CACHE;
+typedef SL_CACHE SL_KMEM_CACHE;
+
+typedef struct _SL_APPX_CACHE_VALUE_DESCRIPTOR {
+    UCHAR HashedName[32];
+    ULONGLONG Expiration;
+    ULONG DataSize;
+    WCHAR Name[ANYSIZE_ARRAY];
+} SL_APPX_CACHE_VALUE_DESCRIPTOR, *PSL_APPX_CACHE_VALUE_DESCRIPTOR;
+
+typedef struct _SL_APPX_CACHE {
+    ULONG Version;
+    ULONG Flags;
+    ULONG DataSize;
+    ULONGLONG DataCheckSum;
+    SL_APPX_CACHE_VALUE_DESCRIPTOR Descriptors[ANYSIZE_ARRAY];
+} SL_APPX_CACHE, *PSL_APPX_CACHE;
+
+
+/*
+** SOFTWARE LICENSING END
+*/
+
 
 /*
 **  LDR START

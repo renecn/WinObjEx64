@@ -64,6 +64,12 @@ typedef struct _OBEX_THREAD_LOOKUP_ENTRY {
     PVOID EntryPtr;
 } OBEX_THREAD_LOOKUP_ENTRY, *POBEX_THREAD_LOOKUP_ENTRY;
 
+// return true to stop enumeration
+typedef BOOL(CALLBACK *PENUMERATE_SL_CACHE_VALUE_DESCRIPTORS_CALLBACK)(
+    _In_ SL_KMEM_CACHE_VALUE_DESCRIPTOR *CacheDescriptor,
+    _In_opt_ PVOID Context
+    );
+
 typedef struct _PROCESS_MITIGATION_POLICIES_ALL {
     PROCESS_MITIGATION_DEP_POLICY DEPPolicy;
     PROCESS_MITIGATION_ASLR_POLICY ASLRPolicy;
@@ -577,3 +583,7 @@ BOOL supPHLCreate(
     _In_ PBYTE ProcessList,
     _Out_ PULONG NumberOfProcesses,
     _Out_ PULONG NumberOfThreads);
+
+BOOLEAN supListLicenseCache(
+    _In_opt_ PENUMERATE_SL_CACHE_VALUE_DESCRIPTORS_CALLBACK Callback,
+    _In_opt_ PVOID Context);

@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        08 May 2019
+*  DATE:        11 May 2019
 *
 *  MINIMUM SUPPORTED OS WINDOWS 7
 *
@@ -373,54 +373,68 @@ NTSTATUS ObEnumerateBoundaryDescriptorEntries(
 )
 {
     ULONG EntrySize, TotalItems = 0, NameEntries = 0, IntegrityLabelEntries = 0;
+    ULONG BoundaryDescriptorItems = 0;
     ULONG_PTR DataEnd;
     OBJECT_BOUNDARY_ENTRY *CurrentEntry, *NextEntry;
 
-    if (BoundaryDescriptor->TotalSize < sizeof(OBJECT_BOUNDARY_DESCRIPTOR))
-        return STATUS_INVALID_PARAMETER;
+    __try {
 
-    if (BoundaryDescriptor->Version != 1)
-        return STATUS_INVALID_PARAMETER;
+        if (BoundaryDescriptor->TotalSize < sizeof(OBJECT_BOUNDARY_DESCRIPTOR))
+            return STATUS_INVALID_PARAMETER;
 
-    DataEnd = (ULONG_PTR)BoundaryDescriptor + BoundaryDescriptor->TotalSize;
-    if (DataEnd < (ULONG_PTR)BoundaryDescriptor)
-        return STATUS_INVALID_PARAMETER;
+        if (BoundaryDescriptor->Version != 1)
+            return STATUS_INVALID_PARAMETER;
 
-    CurrentEntry = (OBJECT_BOUNDARY_ENTRY*)((PBYTE)BoundaryDescriptor +
-        sizeof(OBJECT_BOUNDARY_DESCRIPTOR));
+        DataEnd = (ULONG_PTR)BoundaryDescriptor + BoundaryDescriptor->TotalSize;
+        if (DataEnd < (ULONG_PTR)BoundaryDescriptor)
+            return STATUS_INVALID_PARAMETER;
+
+        CurrentEntry = (OBJECT_BOUNDARY_ENTRY*)((PBYTE)BoundaryDescriptor +
+            sizeof(OBJECT_BOUNDARY_DESCRIPTOR));
+
+        BoundaryDescriptorItems = BoundaryDescriptor->Items;
+
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER) {
+        return GetExceptionCode();
+    }
 
     do {
+        __try {
+            EntrySize = CurrentEntry->EntrySize;
+            if (EntrySize < sizeof(OBJECT_BOUNDARY_ENTRY))
+                return STATUS_INVALID_PARAMETER;
 
-        EntrySize = CurrentEntry->EntrySize;
-        if (EntrySize < sizeof(OBJECT_BOUNDARY_ENTRY))
-            return STATUS_INVALID_PARAMETER;
+            TotalItems++;
 
-        TotalItems++;
+            NextEntry = (OBJECT_BOUNDARY_ENTRY*)ALIGN_UP(((PBYTE)CurrentEntry + EntrySize), ULONG_PTR);
 
-        NextEntry = (OBJECT_BOUNDARY_ENTRY*)ALIGN_UP(((PBYTE)CurrentEntry + EntrySize), ULONG_PTR);
+            if ((NextEntry < CurrentEntry) || ((ULONG_PTR)NextEntry > DataEnd))
+                return STATUS_INVALID_PARAMETER;
 
-        if ((NextEntry < CurrentEntry) || ((ULONG_PTR)NextEntry > DataEnd))
-            return STATUS_INVALID_PARAMETER;
-
-        if (CurrentEntry->EntryType == OBNS_Name) {
-            if (++NameEntries > 1)
-                return STATUS_DUPLICATE_NAME;
-        }
-        else
-
-            if (CurrentEntry->EntryType == OBNS_SID) {
-                if (!ObpValidateSidBuffer(
-                    (PSID)((PBYTE)CurrentEntry + sizeof(OBJECT_BOUNDARY_ENTRY)),
-                    EntrySize - sizeof(OBJECT_BOUNDARY_ENTRY)))
-                {
-                    return STATUS_INVALID_PARAMETER;
-                }
+            if (CurrentEntry->EntryType == OBNS_Name) {
+                if (++NameEntries > 1)
+                    return STATUS_DUPLICATE_NAME;
             }
             else
-                if (CurrentEntry->EntryType == OBNS_IntegrityLabel) {
-                    if (++IntegrityLabelEntries > 1)
-                        return STATUS_DUPLICATE_OBJECTID;
+
+                if (CurrentEntry->EntryType == OBNS_SID) {
+                    if (!ObpValidateSidBuffer(
+                        (PSID)((PBYTE)CurrentEntry + sizeof(OBJECT_BOUNDARY_ENTRY)),
+                        EntrySize - sizeof(OBJECT_BOUNDARY_ENTRY)))
+                    {
+                        return STATUS_INVALID_PARAMETER;
+                    }
                 }
+                else
+                    if (CurrentEntry->EntryType == OBNS_IntegrityLabel) {
+                        if (++IntegrityLabelEntries > 1)
+                            return STATUS_DUPLICATE_OBJECTID;
+                    }
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER) {
+            return GetExceptionCode();
+        }
 
         if (Callback) {
             if (Callback(CurrentEntry, Context))
@@ -431,7 +445,7 @@ NTSTATUS ObEnumerateBoundaryDescriptorEntries(
 
     } while ((ULONG_PTR)CurrentEntry < (ULONG_PTR)DataEnd);
 
-    return (TotalItems != BoundaryDescriptor->Items) ? STATUS_INVALID_PARAMETER : STATUS_SUCCESS;
+    return (TotalItems != BoundaryDescriptorItems) ? STATUS_INVALID_PARAMETER : STATUS_SUCCESS;
 }
 
 /*
@@ -2428,7 +2442,7 @@ POBJREF ObCollectionFindByAddress(
 *
 * Acquire handle of helper driver device if possible.
 *
-* N.B. 
+* N.B.
 *
 *   If device handle is already present function immediately return TRUE.
 *   If current token is not elevated admin token function immediately return FALSE.
