@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        08 May 2019
+*  DATE:        12 May 2019
 *
 *  Test code used while debug.
 *
@@ -715,7 +715,11 @@ BOOL CALLBACK EnumerateSLValueDescriptorCallback(
 
 VOID TestLicenseCache()
 {
-    supListLicenseCache(EnumerateSLValueDescriptorCallback, NULL);
+    PVOID CacheData = supSLCacheRead();
+    if (CacheData) {
+        supSLCacheEnumerate(CacheData, EnumerateSLValueDescriptorCallback, NULL);
+        supHeapFree(CacheData);
+    }
 }
 
 VOID TestCall()

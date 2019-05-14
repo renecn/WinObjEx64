@@ -31,6 +31,9 @@ extrasPN.h
 extrasPSList.c - process list
 extrasPSList.h
 
+extrasSL.c - Software Licensing Cache dialog
+extrasSL.h
+
 extrasUSD.c - UserSharedData dialog
 extrasUSD.h
 

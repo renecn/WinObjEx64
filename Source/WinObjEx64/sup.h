@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        08 May 2019
+*  DATE:        12 May 2019
 *
 *  Common header file for the program support routines.
 *
@@ -584,6 +584,13 @@ BOOL supPHLCreate(
     _Out_ PULONG NumberOfProcesses,
     _Out_ PULONG NumberOfThreads);
 
-BOOLEAN supListLicenseCache(
+PVOID supSLCacheRead(
+    VOID);
+
+BOOLEAN supSLCacheEnumerate(
+    _In_ PVOID CacheData,
     _In_opt_ PENUMERATE_SL_CACHE_VALUE_DESCRIPTORS_CALLBACK Callback,
     _In_opt_ PVOID Context);
+
+HFONT supCreateFontIndirect(
+    _In_ LPWSTR FaceName);

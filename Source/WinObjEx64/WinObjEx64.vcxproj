@@ -26,7 +26,7 @@
     <ProjectGuid>{A68B0947-9415-4ACA-BC0A-8558A4F4FBE3}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>WinObjEx64</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -376,6 +376,7 @@
     <ClCompile Include="extras\extrasIPC.c" />
     <ClCompile Include="extras\extrasPN.c" />
     <ClCompile Include="extras\extrasPSList.c" />
+    <ClCompile Include="extras\extrasSL.c" />
     <ClCompile Include="extras\extrasSSDT.c" />
     <ClCompile Include="extras\extrasUSD.c" />
     <ClCompile Include="findDlg.c" />
@@ -438,6 +439,7 @@
     <ClInclude Include="extras\extrasIPC.h" />
     <ClInclude Include="extras\extrasPN.h" />
     <ClInclude Include="extras\extrasPSList.h" />
+    <ClInclude Include="extras\extrasSL.h" />
     <ClInclude Include="extras\extrasSSDT.h" />
     <ClInclude Include="extras\extrasUSD.h" />
     <ClInclude Include="findDlg.h" />

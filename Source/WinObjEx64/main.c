@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        03 May 2019
+*  DATE:        11 May 2019
 *
 *  Program entry point and main window handler.
 *
@@ -298,10 +298,11 @@ LRESULT MainWindowHandleWMCommand(
 {
     LPWSTR  lpItemText;
     HWND    hwndFocus;
+    WORD    ControlId = LOWORD(wParam);
 
     UNREFERENCED_PARAMETER(lParam);
 
-    switch (LOWORD(wParam)) {
+    switch (ControlId) {
 
     case ID_FILE_RUNASADMIN:
         if (g_kdctx.IsFullAdmin) {
@@ -358,64 +359,29 @@ LRESULT MainWindowHandleWMCommand(
         MainWindowOnRefresh(hwnd);
         break;
 
-        //Extras -> Pipes
-        //Extras -> Mailslots
     case ID_EXTRAS_PIPES:
     case ID_EXTRAS_MAILSLOTS:
-        extrasShowIPCDialog(hwnd, LOWORD(wParam));
-        break;
-
-        //Extras -> UserSharedData
     case ID_EXTRAS_USERSHAREDDATA:
-        extrasShowUserSharedDataDialog(hwnd);
-        break;
-
-        //Extras -> Private Namespaces
-    case ID_EXTRAS_PRIVATENAMESPACES:
-        //
-        // Feature require driver usage and not supported in 10586.
-        //
-        if (g_NtBuildNumber != 10586) {
-            if (kdConnectDriver()) {
-                extrasShowPrivateNamespacesDialog(hwnd);
-            }
-        }
-        break;
-
-        //Extras -> KiServiceTable
-        //Extras -> W32pServiceTable
+    case ID_EXTRAS_PRIVATENAMESPACES:       
     case ID_EXTRAS_SSDT:
     case ID_EXTRAS_W32PSERVICETABLE:
-        //
-        // This feature require driver usage.
-        //
-#ifndef _DEBUG
-        if (kdConnectDriver()) {
-#endif
-            extrasShowSSDTDialog(hwnd, LOWORD(wParam));
-#ifndef _DEBUG
-        }
-#endif
-        break;
-
-        //Extras -> Drivers
     case ID_EXTRAS_DRIVERS:
-        //
-        // Unsupported in Wine.
-        //
-        if (g_WinObj.IsWine == FALSE) {
-            extrasShowDriversDialog(hwnd);
-        }
-        break;
-
-        // Extras -> Process List
     case ID_EXTRAS_PROCESSLIST:
-        extrasShowPsListDialog(hwnd);
-        break;
-
-        // Extras -> Callbacks
     case ID_EXTRAS_CALLBACKS:
-        extrasShowCallbacksDialog(hwnd);
+    case ID_EXTRAS_SOFTWARELICENSECACHE:
+        //
+        // Extras -> Pipes
+        //           Mailslots
+        //           UserSharedData
+        //           Private Namespaces
+        //           KiServiceTable
+        //           W32pServiceTable
+        //           Drivers
+        //           Process List
+        //           Callbacks
+        //           Software Licensing Cache
+        //
+        extrasShowDialogById(hwnd, ControlId);
         break;
 
     case ID_HELP_ABOUT:

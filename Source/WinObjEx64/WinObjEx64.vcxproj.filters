@@ -210,6 +210,9 @@
     <ClCompile Include="ntos\ntldr.c">
       <Filter>ntos</Filter>
     </ClCompile>
+    <ClCompile Include="extras\extrasSL.c">
+      <Filter>Source Files\extras</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc">
@@ -366,6 +369,9 @@
     </ClInclude>
     <ClInclude Include="ntos\ntldr.h">
       <Filter>ntos</Filter>
+    </ClInclude>
+    <ClInclude Include="extras\extrasSL.h">
+      <Filter>Source Files\extras</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

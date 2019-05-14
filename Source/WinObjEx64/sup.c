@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        11 May 2019
+*  DATE:        12 May 2019
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -1305,8 +1305,10 @@ VOID supSetGotoLinkTargetToolButtonState(
             uEnable &= ~MF_GRAYED;
     }
     else {
-        if (supIsSymlink(hwndlv, iItem)) {
-            uEnable &= ~MF_GRAYED;
+        if (hwndlv) {
+            if (supIsSymlink(hwndlv, iItem)) {
+                uEnable &= ~MF_GRAYED;
+            }
         }
     }
     EnableMenuItem(GetSubMenu(GetMenu(hwnd), 2), ID_OBJECT_GOTOLINKTARGET, uEnable);
@@ -5518,56 +5520,107 @@ NTSTATUS supxEnumerateSLCacheValueDescriptors(
 }
 
 /*
-* supListLicenseCache
+* supSLCacheRead
 *
 * Purpose:
 *
-* Read license cache and walk it value descriptors.
+* Read software licensing cache.
+*
+* N.B.
+*
+* Use supHeapFree to release allocated memory.
 *
 */
-BOOLEAN supListLicenseCache(
-    _In_opt_ PENUMERATE_SL_CACHE_VALUE_DESCRIPTORS_CALLBACK Callback,
-    _In_opt_ PVOID Context)
+PVOID supSLCacheRead(
+    VOID)
 {
-    BOOLEAN bResult = FALSE;
     NTSTATUS Status;
     ULONG DataLength = 0;
+    PVOID ReturnData = NULL;
     HANDLE KeyHandle = NULL;
     UNICODE_STRING ProductPolicyValue = RTL_CONSTANT_STRING(L"ProductPolicy");
     UNICODE_STRING ProductOptionsKey = RTL_CONSTANT_STRING(L"\\REGISTRY\\MACHINE\\System\\CurrentControlSet\\Control\\ProductOptions");
     OBJECT_ATTRIBUTES ObjectAttributes;
 
     KEY_VALUE_PARTIAL_INFORMATION *PolicyData;
-    SL_KMEM_CACHE *Cache;
 
-    InitializeObjectAttributes(&ObjectAttributes, &ProductOptionsKey, OBJ_CASE_INSENSITIVE, NULL, NULL);
-    Status = NtOpenKey(&KeyHandle, KEY_READ, &ObjectAttributes);
-    if (!NT_SUCCESS(Status))
-        return FALSE;
+    __try {
 
-    Status = NtQueryValueKey(KeyHandle, &ProductPolicyValue,
-        KeyValuePartialInformation, NULL, 0, &DataLength);
+        InitializeObjectAttributes(&ObjectAttributes, &ProductOptionsKey, OBJ_CASE_INSENSITIVE, NULL, NULL);
+        Status = NtOpenKey(&KeyHandle, KEY_READ, &ObjectAttributes);
+        if (!NT_SUCCESS(Status))
+            return NULL;
 
-    if (Status == STATUS_BUFFER_TOO_SMALL) {
-        PolicyData = (KEY_VALUE_PARTIAL_INFORMATION*)supHeapAlloc(DataLength);
-        if (PolicyData) {
+        Status = NtQueryValueKey(KeyHandle, &ProductPolicyValue,
+            KeyValuePartialInformation, NULL, 0, &DataLength);
 
-            Status = NtQueryValueKey(KeyHandle, &ProductPolicyValue,
-                KeyValuePartialInformation, PolicyData, DataLength, &DataLength);
+        if (Status == STATUS_BUFFER_TOO_SMALL) {
+            PolicyData = (KEY_VALUE_PARTIAL_INFORMATION*)supHeapAlloc(DataLength);
+            if (PolicyData) {
 
-            if (NT_SUCCESS(Status) && (PolicyData->Type == REG_BINARY)) {
+                Status = NtQueryValueKey(KeyHandle, &ProductPolicyValue,
+                    KeyValuePartialInformation, PolicyData, DataLength, &DataLength);
 
-                Cache = (SL_KMEM_CACHE*)PolicyData->Data;
-
-                bResult = NT_SUCCESS(supxEnumerateSLCacheValueDescriptors(Cache, Callback, Context));
-
+                if (NT_SUCCESS(Status) && (PolicyData->Type == REG_BINARY)) {
+                    ReturnData = PolicyData;
+                }
+                else {
+                    supHeapFree(PolicyData);
+                }
             }
-
-            supHeapFree(PolicyData);
         }
+        NtClose(KeyHandle);
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER) {
+        return NULL;
     }
 
-    NtClose(KeyHandle);
+    return ReturnData;
+}
 
-    return bResult;
+/*
+* supSLCacheEnumerate
+*
+* Purpose:
+*
+* Enumerate SL value descriptors and run optional callback.
+*
+*/
+BOOLEAN supSLCacheEnumerate(
+    _In_ PVOID CacheData,
+    _In_opt_ PENUMERATE_SL_CACHE_VALUE_DESCRIPTORS_CALLBACK Callback,
+    _In_opt_ PVOID Context)
+{
+    SL_KMEM_CACHE *Cache;
+
+    Cache = (SL_KMEM_CACHE*)((KEY_VALUE_PARTIAL_INFORMATION*)(CacheData))->Data;
+    return NT_SUCCESS(supxEnumerateSLCacheValueDescriptors(Cache, Callback, Context));
+}
+
+/*
+* supCreateFontIndirect
+*
+* Purpose:
+*
+* Create font object.
+*
+*/
+HFONT supCreateFontIndirect(
+    _In_ LPWSTR FaceName)
+{
+    NONCLIENTMETRICS ncm;
+    HFONT hFont = NULL;
+
+    ncm.cbSize = sizeof(NONCLIENTMETRICS);
+    if (SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(ncm), &ncm, 0)) {
+        ncm.lfCaptionFont.lfHeight += ncm.lfSmCaptionFont.lfHeight / 4;
+        ncm.lfCaptionFont.lfWeight = FW_NORMAL;
+        ncm.lfCaptionFont.lfQuality = CLEARTYPE_QUALITY;
+        ncm.lfCaptionFont.lfPitchAndFamily = FIXED_PITCH | FF_MODERN;
+        _strncpy(ncm.lfCaptionFont.lfFaceName, LF_FACESIZE, FaceName, LF_FACESIZE);
+
+        hFont = CreateFontIndirect(&ncm.lfCaptionFont);
+    }
+
+    return hFont;
 }
