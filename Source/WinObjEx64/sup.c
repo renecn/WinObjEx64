@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        12 May 2019
+*  DATE:        14 May 2019
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -5483,7 +5483,7 @@ NTSTATUS supxEnumerateSLCacheValueDescriptors(
             return STATUS_INVALID_PARAMETER;
 
         MaxPosition = (ULONG_PTR)RtlOffsetToPointer(Cache, Cache->TotalSize);
-        if (MaxPosition < (ULONG_PTR)MaxPosition)
+        if (MaxPosition < (ULONG_PTR)Cache)
             return STATUS_INVALID_PARAMETER;
 
         CacheDescriptor = (SL_KMEM_CACHE_VALUE_DESCRIPTOR*)&Cache->Descriptors;
@@ -5496,6 +5496,17 @@ NTSTATUS supxEnumerateSLCacheValueDescriptors(
     }
 
     do {
+        __try {
+            if ((CacheDescriptor->NameLength > CacheDescriptor->Size) ||
+                (CacheDescriptor->DataLength > CacheDescriptor->Size))
+            {
+                return STATUS_INTERNAL_ERROR;
+            }
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER) {
+            return GetExceptionCode();
+        }
+
 
         if (Callback) {
             if (Callback(CacheDescriptor, Context))

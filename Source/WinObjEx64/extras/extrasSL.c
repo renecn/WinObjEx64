@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        12 May 2019
+*  DATE:        14 May 2019
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -18,7 +18,6 @@
 #include "extras.h"
 
 UINT g_SLCacheImageIndex;
-#define T_PROP_HEXDUMP TEXT("propHexDumpWnd")
 
 /*
 * SLCacheListCompareFunc
@@ -74,6 +73,249 @@ Done:
     return nResult;
 }
 
+/*
+* xxxSLCacheGetSelectedDescriptor
+*
+* Purpose:
+*
+* Query selected listview item associated data.
+*
+*/
+SL_KMEM_CACHE_VALUE_DESCRIPTOR* xxxSLCacheGetSelectedDescriptor(
+    _In_ HWND hwndListView)
+{
+    INT nSelected;
+    SL_KMEM_CACHE_VALUE_DESCRIPTOR *CacheDescriptor = NULL;
+
+    //
+    // Leave if nothing selected.
+    //
+    if (ListView_GetSelectedCount(hwndListView) == 0) {
+        return NULL;
+    }
+    nSelected = ListView_GetSelectionMark(hwndListView);
+    if (nSelected == -1) {
+        return NULL;
+    }
+
+    //
+    // Query associated data.
+    //
+    if (!supGetListViewItemParam(hwndListView, nSelected, (PVOID*)&CacheDescriptor)) {
+        return NULL;
+    }
+
+    return CacheDescriptor;
+}
+
+/*
+* xxxSLCacheGetDescriptorDataType
+*
+* Purpose:
+*
+* Return data type as string constant.
+*
+*/
+LPWSTR xxxSLCacheGetDescriptorDataType(
+    _In_ SL_KMEM_CACHE_VALUE_DESCRIPTOR *CacheDescriptor
+)
+{
+    LPWSTR DataType;
+
+    switch (CacheDescriptor->Type) {
+    case SL_DATA_SZ:
+        DataType = TEXT("SL_DATA_SZ");
+        break;
+    case SL_DATA_DWORD:
+        DataType = TEXT("SL_DATA_DWORD");
+        break;
+    case SL_DATA_BINARY:
+        DataType = TEXT("SL_DATA_BINARY");
+        break;
+    case SL_DATA_MULTI_SZ:
+        DataType = TEXT("SL_DATA_MULTI_SZ");
+        break;
+    case SL_DATA_SUM:
+        DataType = TEXT("SL_DATA_SUM");
+        break;
+
+    default:
+        DataType = NULL;
+        break;
+    }
+    return DataType;
+}
+
+/*
+* SLCacheDialogDisplayDescriptorData
+*
+* Purpose:
+*
+* Output descriptor data to controls.
+*
+*/
+VOID SLCacheDialogDisplayDescriptorData(
+    _In_ HWND hwndDlg,
+    _In_ HWND hwndListView
+)
+{
+    SL_KMEM_CACHE_VALUE_DESCRIPTOR *CacheDescriptor;
+
+    LPWSTR lpText, DataType;
+    PCHAR DataPtr;
+    WCHAR szBuffer[32];
+
+    //
+    // Reset output controls.
+    //
+    SetDlgItemText(hwndDlg, IDC_SLVALUE, TEXT(""));
+    SetDlgItemText(hwndDlg, ID_SLDESCRIPTOR_SIZE, TEXT("0"));
+    SetDlgItemText(hwndDlg, ID_SLDESCRIPTOR_DATALENGTH, TEXT("0"));
+    SetDlgItemText(hwndDlg, ID_SLDESCRIPTOR_ATTRIBUTES, TEXT("0"));
+    SetDlgItemText(hwndDlg, ID_SLDESCRIPTOR_TYPE, T_CannotQuery);
+    SetDlgItemText(hwndDlg, IDC_SLVALUE_NAME, TEXT(""));
+
+    EnableWindow(GetDlgItem(hwndDlg, IDC_SLVALUE_VIEWWITH), FALSE);
+
+    CacheDescriptor = xxxSLCacheGetSelectedDescriptor(hwndListView);
+    if (CacheDescriptor == NULL)
+        return;
+
+    //
+    // Attributes.
+    //
+    RtlSecureZeroMemory(szBuffer, sizeof(szBuffer));
+    ultostr(CacheDescriptor->Attributes, szBuffer);
+    SetDlgItemText(hwndDlg, ID_SLDESCRIPTOR_ATTRIBUTES, szBuffer);
+
+    //
+    // Size and DataLength.
+    //
+    szBuffer[0] = 0;
+    ultostr(CacheDescriptor->Size, szBuffer);
+    SetDlgItemText(hwndDlg, ID_SLDESCRIPTOR_SIZE, szBuffer);
+
+    szBuffer[0] = 0;
+    ultostr(CacheDescriptor->DataLength, szBuffer);
+    SetDlgItemText(hwndDlg, ID_SLDESCRIPTOR_DATALENGTH, szBuffer);
+
+    //
+    // Data type.
+    //
+    DataType = xxxSLCacheGetDescriptorDataType(CacheDescriptor);
+    if (DataType == NULL) DataType = T_CannotQuery;
+    SetDlgItemText(hwndDlg, ID_SLDESCRIPTOR_TYPE, DataType);
+
+    //
+    // Name.
+    //
+    lpText = (LPWSTR)supHeapAlloc(CacheDescriptor->NameLength + sizeof(WCHAR));
+    if (lpText) {
+        RtlCopyMemory(lpText, CacheDescriptor->Name, CacheDescriptor->NameLength);
+        SetDlgItemText(hwndDlg, IDC_SLVALUE_NAME, lpText);
+        supHeapFree(lpText);
+    }
+
+    //
+    // Display Data.
+    //
+    switch (CacheDescriptor->Type) {
+
+    case SL_DATA_DWORD:
+
+        DataPtr = RtlOffsetToPointer(CacheDescriptor,
+            FIELD_OFFSET(SL_KMEM_CACHE_VALUE_DESCRIPTOR, Name) + CacheDescriptor->NameLength);
+
+        szBuffer[0] = 0;
+        ultostr((ULONG)*DataPtr, szBuffer);
+        SetDlgItemText(hwndDlg, IDC_SLVALUE, szBuffer);
+
+        break;
+
+    case SL_DATA_SZ:
+        lpText = (LPWSTR)supHeapAlloc(CacheDescriptor->DataLength + sizeof(WCHAR));
+        if (lpText) {
+
+            DataPtr = RtlOffsetToPointer(CacheDescriptor,
+                FIELD_OFFSET(SL_KMEM_CACHE_VALUE_DESCRIPTOR, Name) + CacheDescriptor->NameLength);
+
+            RtlCopyMemory(lpText, DataPtr, CacheDescriptor->DataLength);
+
+            SetDlgItemText(hwndDlg, IDC_SLVALUE, lpText);
+
+            supHeapFree(lpText);
+        }
+        break;
+
+    case SL_DATA_BINARY:
+        SetDlgItemText(hwndDlg, IDC_SLVALUE, TEXT("Binary data, use \"View\" button to open an external viewer"));
+        EnableWindow(GetDlgItem(hwndDlg, IDC_SLVALUE_VIEWWITH), TRUE);
+        break;
+
+    default:
+        break;
+    }
+
+}
+
+/*
+* SLCacheDialogViewBinaryData
+*
+* Purpose:
+*
+* Save selected binary data to disk and open it with external viewer (or spawn OpenWith dialog).
+*
+*/
+VOID SLCacheDialogViewBinaryData(
+    _In_ HWND hwndListView
+)
+{
+    SL_KMEM_CACHE_VALUE_DESCRIPTOR *CacheDescriptor;
+    PCHAR DataPtr;
+    SHELLEXECUTEINFO ShInfo;
+
+    WCHAR szFileName[MAX_PATH * 2];
+
+    CacheDescriptor = xxxSLCacheGetSelectedDescriptor(hwndListView);
+    if (CacheDescriptor == NULL)
+        return;
+
+    //
+    // Only for SL_DATA_BINARY.
+    //
+    if (CacheDescriptor->Type != SL_DATA_BINARY)
+        return;
+
+    DataPtr = RtlOffsetToPointer(CacheDescriptor,
+        FIELD_OFFSET(SL_KMEM_CACHE_VALUE_DESCRIPTOR, Name) + CacheDescriptor->NameLength);
+
+    _strcpy(szFileName, g_WinObj.szTempDirectory);
+    _strcat(szFileName, TEXT("\\SLData"));
+    u64tohex((ULONG_PTR)CacheDescriptor, _strend(szFileName));
+    _strcat(szFileName, TEXT(".bin"));
+
+    if (CacheDescriptor->DataLength == supWriteBufferToFile(szFileName,
+        (PVOID)DataPtr,
+        (SIZE_T)CacheDescriptor->DataLength,
+        TRUE,
+        FALSE))
+    {
+        RtlSecureZeroMemory(&ShInfo, sizeof(ShInfo));
+        ShInfo.cbSize = sizeof(ShInfo);
+        ShInfo.lpVerb = TEXT("open");
+        ShInfo.lpFile = szFileName;
+        ShInfo.nShow = SW_SHOW;
+        ShInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
+        if (ShellExecuteEx(&ShInfo)) {
+            if (ShInfo.hProcess) {
+                WaitForSingleObject(ShInfo.hProcess, INFINITE);
+                CloseHandle(ShInfo.hProcess);
+            }
+            DeleteFile(szFileName);
+        }
+    }
+
+}
 
 /*
 * SLCacheDialogHandleNotify
@@ -125,11 +367,10 @@ VOID SLCacheDialogHandleNotify(
 
         case LVN_ITEMCHANGED:
         case NM_CLICK:
-            //FIXME
-            break;
-
-        case NM_DBLCLK:
-            //FIXME
+            pDlgContext = (EXTRASCONTEXT*)GetProp(hwndDlg, T_DLGCONTEXT);
+            if (pDlgContext) {
+                SLCacheDialogDisplayDescriptorData(pDlgContext->hwndDlg, pDlgContext->ListView);
+            }
             break;
 
         default:
@@ -155,7 +396,6 @@ INT_PTR CALLBACK SLCacheDialogProc(
 {
     EXTRASCONTEXT *pDlgContext;
     LPNMLISTVIEW nhdr = (LPNMLISTVIEW)lParam;
-    HFONT hFont;
 
     switch (uMsg) {
 
@@ -182,13 +422,7 @@ INT_PTR CALLBACK SLCacheDialogProc(
 
             supHeapFree(pDlgContext);
         }
-        hFont = (HFONT)GetProp(hwndDlg, T_PROP_FONT);
-        if (hFont) {
-            DeleteObject(hFont);
-        }
         RemoveProp(hwndDlg, T_DLGCONTEXT);
-        RemoveProp(hwndDlg, T_PROP_HEXDUMP);
-        RemoveProp(hwndDlg, T_PROP_FONT);
         return DestroyWindow(hwndDlg);
 
     case WM_COMMAND:
@@ -197,6 +431,13 @@ INT_PTR CALLBACK SLCacheDialogProc(
 
         case IDCANCEL:
             SendMessage(hwndDlg, WM_CLOSE, 0, 0);
+            return TRUE;
+
+        case IDC_SLVALUE_VIEWWITH:
+            pDlgContext = (EXTRASCONTEXT*)GetProp(hwndDlg, T_DLGCONTEXT);
+            if (pDlgContext) {
+                SLCacheDialogViewBinaryData(pDlgContext->ListView);
+            }
             return TRUE;
         }
         break;
@@ -244,28 +485,11 @@ BOOL CALLBACK SLCacheEnumerateCallback(
         lvItem.lParam = (LPARAM)CacheDescriptor;
         itemIndex = ListView_InsertItem(pDlgContext->ListView, &lvItem);
 
-        switch (CacheDescriptor->Type) {
-        case SL_DATA_SZ:
-            EntryType = TEXT("SL_DATA_SZ");
-            break;
-        case SL_DATA_DWORD:
-            EntryType = TEXT("SL_DATA_DWORD");
-            break;
-        case SL_DATA_BINARY:
-            EntryType = TEXT("SL_DATA_BINARY");
-            break;
-        case SL_DATA_MULTI_SZ:
-            EntryType = TEXT("SL_DATA_MULTI_SZ");
-            break;
-        case SL_DATA_SUM:
-            EntryType = TEXT("SL_DATA_SUM");
-            break;
-
-        default:
+        EntryType = xxxSLCacheGetDescriptorDataType(CacheDescriptor);
+        if (EntryType == NULL) {
             szBuffer[0] = 0;
             ultostr(CacheDescriptor->Type, szBuffer);
             EntryType = (LPWSTR)&szBuffer;
-            break;
         }
 
         //Type
@@ -293,14 +517,15 @@ VOID extrasCreateSLCacheDialog(
     _In_ HWND hwndParent
 )
 {
+    INT             nCount;
     PVOID           SLCacheData;
 
-    HFONT           hFont;
-    HWND            hwndDlg, hwndHexDump;
+    HWND            hwndDlg;
     LVCOLUMN        col;
     EXTRASCONTEXT  *pDlgContext;
 
     ENUMCHILDWNDDATA ChildWndData;
+    WCHAR szBuffer[100];
 
     //
     // Allow only one dialog, if it already open - activate it.
@@ -358,7 +583,7 @@ VOID extrasCreateSLCacheDialog(
         col.pszText = TEXT("Name");
         col.fmt = LVCFMT_LEFT | LVCFMT_BITMAP_ON_RIGHT;
         col.iImage = ImageList_GetImageCount(g_ListViewImages) - 1;
-        col.cx = 400;
+        col.cx = 450;
         ListView_InsertColumn(pDlgContext->ListView, col.iSubItem, &col);
 
         col.iImage = I_IMAGENONE;
@@ -375,33 +600,6 @@ VOID extrasCreateSLCacheDialog(
     }
 
     //
-    // Initialize Hex Dump listview.
-    //
-    hwndHexDump = GetDlgItem(pDlgContext->hwndDlg, ID_SLDATALIST);
-    if (hwndHexDump) {
-        SetProp(pDlgContext->hwndDlg, T_PROP_HEXDUMP, (HANDLE)hwndHexDump);
-
-        ListView_SetExtendedListViewStyle(hwndHexDump,
-            LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER | LVS_EX_LABELTIP | LVS_EX_GRIDLINES);
-
-        SetWindowTheme(hwndHexDump, TEXT("Explorer"), NULL);
-        RtlSecureZeroMemory(&col, sizeof(col));
-        col.mask = LVCF_FMT | LVCF_WIDTH;
-        col.fmt = LVCFMT_LEFT;
-        col.cx = 420;
-        ListView_InsertColumn(hwndHexDump, 1, &col);
-        col.cx = 140;
-        ListView_InsertColumn(hwndHexDump, 2, &col);
-
-        hFont = supCreateFontIndirect(T_DEFAULT_AUX_FONT);
-        if (hFont) {
-            SendMessage(hwndHexDump, WM_SETFONT, (WPARAM)hFont, (LPARAM)0);
-            SetProp(pDlgContext->hwndDlg, T_PROP_FONT, (HANDLE)hFont);
-        }
-
-    }
-
-    //
     // Remember image index.
     //
     g_SLCacheImageIndex = ObManagerGetImageIndexByTypeIndex(ObjectTypeToken);
@@ -413,6 +611,11 @@ VOID extrasCreateSLCacheDialog(
     if (SLCacheData) {
         pDlgContext->Reserved = (ULONG_PTR)SLCacheData;
         supSLCacheEnumerate(SLCacheData, SLCacheEnumerateCallback, pDlgContext);
+
+        nCount = ListView_GetItemCount(pDlgContext->ListView);
+        _strcpy(szBuffer, TEXT("SLCache, number of descriptors = "));
+        itostr(nCount, _strend(szBuffer));
+        SetWindowText(pDlgContext->hwndDlg, szBuffer);
     }
     else {
 

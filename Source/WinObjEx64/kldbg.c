@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        11 May 2019
+*  DATE:        13 May 2019
 *
 *  MINIMUM SUPPORTED OS WINDOWS 7
 *
@@ -385,11 +385,11 @@ NTSTATUS ObEnumerateBoundaryDescriptorEntries(
         if (BoundaryDescriptor->Version != 1)
             return STATUS_INVALID_PARAMETER;
 
-        DataEnd = (ULONG_PTR)BoundaryDescriptor + BoundaryDescriptor->TotalSize;
+        DataEnd = (ULONG_PTR)RtlOffsetToPointer(BoundaryDescriptor, BoundaryDescriptor->TotalSize);
         if (DataEnd < (ULONG_PTR)BoundaryDescriptor)
             return STATUS_INVALID_PARAMETER;
 
-        CurrentEntry = (OBJECT_BOUNDARY_ENTRY*)((PBYTE)BoundaryDescriptor +
+        CurrentEntry = (OBJECT_BOUNDARY_ENTRY*)RtlOffsetToPointer(BoundaryDescriptor, 
             sizeof(OBJECT_BOUNDARY_DESCRIPTOR));
 
         BoundaryDescriptorItems = BoundaryDescriptor->Items;

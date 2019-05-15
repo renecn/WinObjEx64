@@ -4,9 +4,9 @@
 *
 *  TITLE:       NTLDR.C
 *
-*  VERSION:     1.12
+*  VERSION:     1.13
 *
-*  DATE:        11 May 2019
+*  DATE:        13 May 2019
 *
 *  NT loader related code.
 *
@@ -152,7 +152,7 @@ ULONG NtRawEnumExports(
     for (c = 0; c < exp->NumberOfFunctions; ++c)
     {
         fnptr = (ULONG_PTR)Module + FnPtrTable[c];
-        if (*(PDWORD)fnptr != 0xb8d18b4c)
+        if (*(PDWORD)fnptr != 0xb8d18b4c) //mov r10, rcx; mov eax
             continue;
 
         NewEntry = (PWIN32_SHADOWTABLE)RtlAllocateHeap(HeapHandle,

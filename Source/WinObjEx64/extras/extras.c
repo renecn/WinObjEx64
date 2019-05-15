@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        12 May 2019
+*  DATE:        14 May 2019
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -150,7 +150,7 @@ VOID extrasShowDialogById(
     case ID_EXTRAS_MAILSLOTS:
         if (DialogId == ID_EXTRAS_MAILSLOTS)
             extrasCreateIpcDialog(ParentWindow, IpcModeMailSlots);
-        else if (DialogId == ID_EXTRAS_PIPES)
+        else
             extrasCreateIpcDialog(ParentWindow, IpcModeNamedPipes);
         break;
 
@@ -179,7 +179,7 @@ VOID extrasShowDialogById(
 #endif
             if (DialogId == ID_EXTRAS_SSDT)
                 extrasCreateSSDTDialog(ParentWindow, SST_Ntos);
-            else if (DialogId == ID_EXTRAS_W32PSERVICETABLE)
+            else
                 extrasCreateSSDTDialog(ParentWindow, SST_Win32k);
 
 #ifndef _DEBUG
