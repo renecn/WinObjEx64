@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        14 May 2019
+*  DATE:        15 May 2019
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -988,8 +988,8 @@ LPWSTR supGetItemText2(
     _In_ HWND ListView,
     _In_ INT nItem,
     _In_ INT nSubItem,
-    _In_ LPWSTR pszText,
-    _In_ UINT cbText
+    _In_ WCHAR *pszText,
+    _In_ UINT cchText
 )
 {
     LV_ITEM item;
@@ -999,7 +999,7 @@ LPWSTR supGetItemText2(
     item.iItem = nItem;
     item.iSubItem = nSubItem;
     item.pszText = pszText;
-    item.cchTextMax = (SIZE_T)cbText;
+    item.cchTextMax = (SIZE_T)cchText;
     SendMessage(ListView, LVM_GETITEMTEXT, (WPARAM)item.iItem, (LPARAM)&item);
 
     return item.pszText;
@@ -4899,14 +4899,14 @@ NTSTATUS supOpenThread(
 */
 BOOL supPrintTimeConverted(
     _In_ PLARGE_INTEGER Time,
-    _In_ LPWSTR lpBuffer,
+    _In_ WCHAR *lpszBuffer,
     _In_ SIZE_T cchBuffer
 )
 {
     FILETIME ConvertedTime;
     TIME_FIELDS TimeFields;
 
-    if ((Time == NULL) || (lpBuffer == NULL)) return 0;
+    if ((Time == NULL) || (lpszBuffer == NULL)) return 0;
     if (cchBuffer == 0) return 0;
 
     RtlSecureZeroMemory(&ConvertedTime, sizeof(ConvertedTime));
@@ -4918,7 +4918,7 @@ BOOL supPrintTimeConverted(
         if (TimeFields.Month > 12) TimeFields.Month = 12;
 
         rtl_swprintf_s(
-            lpBuffer,
+            lpszBuffer,
             cchBuffer,
             FORMATTED_TIME_DATE_VALUE,
             TimeFields.Hour,

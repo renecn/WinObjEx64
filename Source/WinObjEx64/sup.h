@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        12 May 2019
+*  DATE:        15 May 2019
 *
 *  Common header file for the program support routines.
 *
@@ -255,8 +255,8 @@ LPWSTR supGetItemText2(
     _In_ HWND ListView,
     _In_ INT nItem,
     _In_ INT nSubItem,
-    _In_ LPWSTR pszText,
-    _In_ UINT cbText);
+    _In_ WCHAR *pszText,
+    _In_ UINT cchText);
 
 BOOL supQueryLinkTarget(
     _In_opt_ HANDLE hRootDirectory,
@@ -531,7 +531,7 @@ NTSTATUS supOpenThread(
 
 BOOL supPrintTimeConverted(
     _In_ PLARGE_INTEGER Time,
-    _In_ LPWSTR lpBuffer,
+    _In_ WCHAR *lpszBuffer,
     _In_ SIZE_T cchBuffer);
 
 BOOL supGetListViewItemParam(

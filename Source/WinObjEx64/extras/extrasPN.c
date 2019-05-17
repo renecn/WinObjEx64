@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        11 May 2019
+*  DATE:        15 May 2019
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -285,8 +285,9 @@ VOID PNDlgOutputSelectedSidInformation(
     BOOL bNeedFree = FALSE;
     HWND hComboBox;
     LRESULT nSelected;
-    PSID pSid;
-    PWSTR stype;
+    PSID pSid = NULL;
+    LPWSTR SidType, SidValue;
+    SIZE_T SidLength;
 
     DWORD cAccountName = 0, cReferencedDomainName = 0;
 
@@ -296,30 +297,44 @@ VOID PNDlgOutputSelectedSidInformation(
 
     EXT_SID_NAME_USE peUse;
 
-    WCHAR szSid[MAX_PATH * 2];
 
     //
-    // Not SID specified, get current selection in combobox and use it as SID.
+    // No SID specified, get current selection in combobox and use it as SID.
     //
     if (Sid == NULL) {
         hComboBox = GetDlgItem(hwndDlg, ID_BDESCRIPTOR_SID);
 
         nSelected = SendMessage(hComboBox, CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
+        if (nSelected != CB_ERR) {
 
-        RtlSecureZeroMemory(szSid, sizeof(szSid));
-        SendMessage(hComboBox, CB_GETLBTEXT, nSelected, (LPARAM)&szSid);
+            SidLength = SendMessage(hComboBox, CB_GETLBTEXTLEN, (WPARAM)nSelected, 0);
+            if (SidLength) {
 
-        if (ConvertStringSidToSid(szSid, &pSid)) {
-            bNeedFree = TRUE;
-        }
-        else {
-            return;
+                SidValue = (LPWSTR)supHeapAlloc((1 + SidLength) * sizeof(WCHAR));
+                if (SidValue) {
+
+                    if (CB_ERR != SendMessage(hComboBox, CB_GETLBTEXT, nSelected, (LPARAM)SidValue)) {
+
+                        if (ConvertStringSidToSid(SidValue, &pSid)) {
+                            bNeedFree = TRUE;
+                        }
+                    }
+
+                    supHeapFree(SidValue);
+                }
+            }
         }
     }
     else {
         pSid = Sid;
         bNeedFree = FALSE;
     }
+
+    //
+    // Convertion failure.
+    //
+    if (pSid == NULL)
+        return;
 
     //
     // SID account domain\name (type).
@@ -350,42 +365,42 @@ VOID PNDlgOutputSelectedSidInformation(
         //
         switch (peUse) {
         case ExtSidTypeUser:
-            stype = TEXT(" (SidUserType)");
+            SidType = TEXT(" (SidUserType)");
             break;
         case ExtSidTypeGroup:
-            stype = TEXT(" (SidTypeGroup)");
+            SidType = TEXT(" (SidTypeGroup)");
             break;
         case ExtSidTypeDomain:
-            stype = TEXT(" (SidTypeDomain)");
+            SidType = TEXT(" (SidTypeDomain)");
             break;
         case ExtSidTypeAlias:
-            stype = TEXT(" (SidTypeAlias)");
+            SidType = TEXT(" (SidTypeAlias)");
             break;
         case ExtSidTypeWellKnownGroup:
-            stype = TEXT(" (SidTypeWellKnownGroup)");
+            SidType = TEXT(" (SidTypeWellKnownGroup)");
             break;
         case ExtSidTypeDeletedAccount:
-            stype = TEXT(" (SidTypeDeletedAccount)");
+            SidType = TEXT(" (SidTypeDeletedAccount)");
             break;
         case ExtSidTypeInvalid:
-            stype = TEXT(" (SidTypeInvalid)");
+            SidType = TEXT(" (SidTypeInvalid)");
             break;
         case ExtSidTypeComputer:
-            stype = TEXT(" (SidTypeComputer)");
+            SidType = TEXT(" (SidTypeComputer)");
             break;
         case ExtSidTypeLabel:
-            stype = TEXT(" (SidTypeLabel)");
+            SidType = TEXT(" (SidTypeLabel)");
             break;
         case ExtSidTypeLogonSession:
-            stype = TEXT(" (SidTypeLogonSession)");
+            SidType = TEXT(" (SidTypeLogonSession)");
             break;
         case ExtSidTypeUnknown:
         default:
-            stype = TEXT(" (SidTypeUnknown)");
+            SidType = TEXT(" (SidTypeUnknown)");
             break;
         }
 
-        _strcat(szAccountInfo, stype);
+        _strcat(szAccountInfo, SidType);
     }
     else {
         _strcpy(szAccountInfo, T_CannotQuery);

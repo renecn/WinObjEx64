@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        14 May 2019
+*  DATE:        15 May 2019
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -224,7 +224,7 @@ VOID SLCacheDialogDisplayDescriptorData(
     case SL_DATA_DWORD:
 
         DataPtr = RtlOffsetToPointer(CacheDescriptor,
-            FIELD_OFFSET(SL_KMEM_CACHE_VALUE_DESCRIPTOR, Name) + CacheDescriptor->NameLength);
+            (ULONG_PTR)FIELD_OFFSET(SL_KMEM_CACHE_VALUE_DESCRIPTOR, Name) + CacheDescriptor->NameLength);
 
         szBuffer[0] = 0;
         ultostr((ULONG)*DataPtr, szBuffer);
@@ -237,7 +237,7 @@ VOID SLCacheDialogDisplayDescriptorData(
         if (lpText) {
 
             DataPtr = RtlOffsetToPointer(CacheDescriptor,
-                FIELD_OFFSET(SL_KMEM_CACHE_VALUE_DESCRIPTOR, Name) + CacheDescriptor->NameLength);
+                (ULONG_PTR)FIELD_OFFSET(SL_KMEM_CACHE_VALUE_DESCRIPTOR, Name) + CacheDescriptor->NameLength);
 
             RtlCopyMemory(lpText, DataPtr, CacheDescriptor->DataLength);
 
@@ -287,7 +287,7 @@ VOID SLCacheDialogViewBinaryData(
         return;
 
     DataPtr = RtlOffsetToPointer(CacheDescriptor,
-        FIELD_OFFSET(SL_KMEM_CACHE_VALUE_DESCRIPTOR, Name) + CacheDescriptor->NameLength);
+        (ULONG_PTR)FIELD_OFFSET(SL_KMEM_CACHE_VALUE_DESCRIPTOR, Name) + CacheDescriptor->NameLength);
 
     _strcpy(szFileName, g_WinObj.szTempDirectory);
     _strcat(szFileName, TEXT("\\SLData"));
@@ -302,7 +302,7 @@ VOID SLCacheDialogViewBinaryData(
     {
         RtlSecureZeroMemory(&ShInfo, sizeof(ShInfo));
         ShInfo.cbSize = sizeof(ShInfo);
-        ShInfo.lpVerb = TEXT("open");
+        ShInfo.lpVerb = NULL;
         ShInfo.lpFile = szFileName;
         ShInfo.nShow = SW_SHOW;
         ShInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
@@ -557,65 +557,65 @@ VOID extrasCreateSLCacheDialog(
     g_WinObj.AuxDialogs[wobjSLCacheDlgId] = hwndDlg;
 
     extrasSetDlgIcon(hwndDlg);
-
-    //
-    // Initialize main listview.
-    //
-    pDlgContext->ListView = GetDlgItem(pDlgContext->hwndDlg, ID_SLCACHELIST);
-    if (pDlgContext->ListView) {
-
-        //
-        // Set listview imagelist, style flags and theme.
-        //
-        ListView_SetImageList(pDlgContext->ListView, g_ListViewImages, LVSIL_SMALL);
-        ListView_SetExtendedListViewStyle(
-            pDlgContext->ListView,
-            LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER | LVS_EX_GRIDLINES | LVS_EX_LABELTIP);
-
-        SetWindowTheme(pDlgContext->ListView, TEXT("Explorer"), NULL);
-
-        //
-        // Create ListView columns.
-        //
-        RtlSecureZeroMemory(&col, sizeof(col));
-        col.mask = LVCF_TEXT | LVCF_SUBITEM | LVCF_FMT | LVCF_WIDTH | LVCF_ORDER | LVCF_IMAGE;
-        col.iSubItem++;
-        col.pszText = TEXT("Name");
-        col.fmt = LVCFMT_LEFT | LVCFMT_BITMAP_ON_RIGHT;
-        col.iImage = ImageList_GetImageCount(g_ListViewImages) - 1;
-        col.cx = 450;
-        ListView_InsertColumn(pDlgContext->ListView, col.iSubItem, &col);
-
-        col.iImage = I_IMAGENONE;
-
-        col.iSubItem++;
-        col.pszText = TEXT("Type");
-        col.iOrder = 1;
-        col.cx = 120;
-        ListView_InsertColumn(pDlgContext->ListView, col.iSubItem, &col);
-
-        //remember columns count
-        pDlgContext->lvColumnCount = col.iSubItem;
-
-    }
-
-    //
-    // Remember image index.
-    //
-    g_SLCacheImageIndex = ObManagerGetImageIndexByTypeIndex(ObjectTypeToken);
-
+    
     //
     // Read and enumerate cache.
     //
     SLCacheData = supSLCacheRead();
     if (SLCacheData) {
-        pDlgContext->Reserved = (ULONG_PTR)SLCacheData;
-        supSLCacheEnumerate(SLCacheData, SLCacheEnumerateCallback, pDlgContext);
 
-        nCount = ListView_GetItemCount(pDlgContext->ListView);
-        _strcpy(szBuffer, TEXT("SLCache, number of descriptors = "));
-        itostr(nCount, _strend(szBuffer));
-        SetWindowText(pDlgContext->hwndDlg, szBuffer);
+        //
+        // Initialize main listview.
+        //
+        pDlgContext->ListView = GetDlgItem(pDlgContext->hwndDlg, ID_SLCACHELIST);
+        if (pDlgContext->ListView) {
+
+            //
+            // Set listview imagelist, style flags and theme.
+            //
+            ListView_SetImageList(pDlgContext->ListView, g_ListViewImages, LVSIL_SMALL);
+            ListView_SetExtendedListViewStyle(
+                pDlgContext->ListView,
+                LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER | LVS_EX_GRIDLINES | LVS_EX_LABELTIP);
+
+            SetWindowTheme(pDlgContext->ListView, TEXT("Explorer"), NULL);
+
+            //
+            // Create ListView columns.
+            //
+            RtlSecureZeroMemory(&col, sizeof(col));
+            col.mask = LVCF_TEXT | LVCF_SUBITEM | LVCF_FMT | LVCF_WIDTH | LVCF_ORDER | LVCF_IMAGE;
+            col.iSubItem++;
+            col.pszText = TEXT("Name");
+            col.fmt = LVCFMT_LEFT | LVCFMT_BITMAP_ON_RIGHT;
+            col.iImage = ImageList_GetImageCount(g_ListViewImages) - 1;
+            col.cx = 450;
+            ListView_InsertColumn(pDlgContext->ListView, col.iSubItem, &col);
+
+            col.iImage = I_IMAGENONE;
+
+            col.iSubItem++;
+            col.pszText = TEXT("Type");
+            col.iOrder = 1;
+            col.cx = 120;
+            ListView_InsertColumn(pDlgContext->ListView, col.iSubItem, &col);
+
+            //remember columns count
+            pDlgContext->lvColumnCount = col.iSubItem;
+
+            //
+            // Remember image index.
+            //
+            g_SLCacheImageIndex = ObManagerGetImageIndexByTypeIndex(ObjectTypeToken);
+
+            pDlgContext->Reserved = (ULONG_PTR)SLCacheData;
+            supSLCacheEnumerate(SLCacheData, SLCacheEnumerateCallback, pDlgContext);
+
+            nCount = ListView_GetItemCount(pDlgContext->ListView);
+            _strcpy(szBuffer, TEXT("SLCache, number of descriptors = "));
+            itostr(nCount, _strend(szBuffer));
+            SetWindowText(pDlgContext->hwndDlg, szBuffer);
+        }
     }
     else {
 

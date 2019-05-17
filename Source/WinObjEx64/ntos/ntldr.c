@@ -4,9 +4,9 @@
 *
 *  TITLE:       NTLDR.C
 *
-*  VERSION:     1.13
+*  VERSION:     1.14
 *
-*  DATE:        13 May 2019
+*  DATE:        15 May 2019
 *
 *  NT loader related code.
 *
@@ -414,6 +414,7 @@ NTSTATUS NtLdrApiSetResolveLibrary(
 )
 {
     BOOL IsResolved = FALSE;
+    NTSTATUS Status = STATUS_UNSUCCESSFUL;
     PWCHAR BufferPtr;
     USHORT Length;
     ULONG Code;
@@ -515,6 +516,7 @@ NTSTATUS NtLdrApiSetResolveLibrary(
                     ResolvedHostLibraryName->Length = (USHORT)HostLibraryEntry->ValueLength;
                     ResolvedHostLibraryName->MaximumLength = (USHORT)HostLibraryEntry->ValueLength;
                     ResolvedHostLibraryName->Buffer = BufferPtr;
+                    Status = STATUS_SUCCESS;
                 }
             }
         }
@@ -526,7 +528,7 @@ NTSTATUS NtLdrApiSetResolveLibrary(
     }
 
     *Resolved = IsResolved;
-    return STATUS_SUCCESS;
+    return Status;
 }
 
 /*
