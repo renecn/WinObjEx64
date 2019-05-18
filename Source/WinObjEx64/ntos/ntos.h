@@ -4,9 +4,9 @@
 *
 *  TITLE:       NTOS.H
 *
-*  VERSION:     1.114
+*  VERSION:     1.115
 *
-*  DATE:        11 May 2019
+*  DATE:        17 May 2019
 *
 *  Common header file for the ntos API functions and definitions.
 *
@@ -898,10 +898,12 @@ typedef enum _PROCESSINFOCLASS {
     ProcessSystemResourceManagement = 91,
     ProcessSequenceNumber = 92,
     ProcessLoaderDetour = 93,
-    ProcessSecurityDomainInformation = 93,
-    ProcessCombineSecurityDomainsInformation = 94,
-    ProcessEnableLogging = 95,
-    ProcessLeapSecondInformation = 96,
+    ProcessSecurityDomainInformation = 94,
+    ProcessCombineSecurityDomainsInformation = 95,
+    ProcessEnableLogging = 96,
+    ProcessLeapSecondInformation = 97,
+    ProcessFiberShadowStackAllocation = 98,
+    ProcessFreeFiberShadowStackAllocation = 99,
     MaxProcessInfoClass
 } PROCESSINFOCLASS;
 
@@ -1520,6 +1522,8 @@ typedef enum _SYSTEM_INFORMATION_CLASS {
     SystemCodeIntegrityUnlockModeInformation = 205,
     SystemLeapSecondInformation = 206,
     SystemFlags2Information = 207,
+    SystemSecurityModelInformation = 208,
+    SystemCodeIntegritySyntheticCacheInformation = 209,
     MaxSystemInfoClass
 } SYSTEM_INFORMATION_CLASS, *PSYSTEM_INFORMATION_CLASS;
 
@@ -1780,6 +1784,10 @@ typedef enum _FILE_INFORMATION_CLASS {
     FileMemoryPartitionInformation,
     FileStatLxInformation,
     FileCaseSensitiveInformation,
+    FileLinkInformationEx,
+    FileLinkInformationExBypassAccessCheck,
+    FileStorageReserveIdInformation,
+    FileCaseSensitiveInformationForceAccessCheck,
     FileMaximumInformation
 } FILE_INFORMATION_CLASS, *PFILE_INFORMATION_CLASS;
 
@@ -1797,6 +1805,7 @@ typedef enum _FSINFOCLASS {
     FileFsSectorSizeInformation,
     FileFsDataCopyInformation,
     FileFsMetadataSizeInformation,
+    FileFsFullSizeInformationEx,
     FileFsMaximumInformation
 } FS_INFORMATION_CLASS, *PFS_INFORMATION_CLASS;
 
@@ -11003,6 +11012,26 @@ NtTraceControl(
     _Out_writes_bytes_opt_(OutBufferLen) PVOID OutBuffer,
     _In_ ULONG OutBufferLen,
     _Out_ PULONG ReturnLength);
+
+/************************************************************************************
+*
+* Enclave API.
+*
+************************************************************************************/
+
+NTSYSAPI
+NTSTATUS
+NTAPI
+NtLoadEnclaveData(
+    _In_ HANDLE ProcessHandle,
+    _In_ PVOID BaseAddress,
+    _In_reads_bytes_(BufferSize) PVOID Buffer,
+    _In_ SIZE_T BufferSize,
+    _In_ ULONG Protect,
+    _In_reads_bytes_(PageInformationLength) PVOID PageInformation,
+    _In_ ULONG PageInformationLength,
+    _Out_opt_ PSIZE_T NumberOfBytesWritten,
+    _Out_opt_ PULONG EnclaveError);
 
 /************************************************************************************
 *

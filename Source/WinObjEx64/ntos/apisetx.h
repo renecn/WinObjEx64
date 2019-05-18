@@ -63,19 +63,19 @@
     ((ValueEntry->ValueOffset == 0) && (ValueEntry->ValueLength == 0) && \
     (ValueEntry->NameOffset == 0) && (ValueEntry->NameLength == 0))
 
-#define APISET_TO_UPPER_PREFIX(x) (x & 0xFFFFFFDFFFDFFFDFULL)
+#define APISET_TO_UPPER_PREFIX(x) ((x) & 0xFFFFFFDFFFDFFFDFULL)
 
 //
 // Macro for APISET structures.
 //
 #define API_SET_TO_VALUE_ENTRY(Namespace, Entry, Index) \
-    ((API_SET_VALUE_ENTRY_V6 *)RtlOffsetToPointer(Namespace, Index * sizeof(API_SET_VALUE_ENTRY_V6) + Entry->DataOffset))
+    ((API_SET_VALUE_ENTRY_V6 *)RtlOffsetToPointer(Namespace, (Index) * sizeof(API_SET_VALUE_ENTRY_V6) + Entry->DataOffset))
 
 #define API_SET_TO_VALUE_NAME(Namespace, Entry) \
     ((PWCHAR)RtlOffsetToPointer(Namespace, Entry->NameOffset))
 
 #define API_SET_TO_HASH_ENTRY(Namespace, HashIndex) \
-   ((API_SET_HASH_ENTRY_V6*)RtlOffsetToPointer(Namespace, Namespace->NamespaceHashesOffset + sizeof(ULONG_PTR) * HashIndex))
+   ((API_SET_HASH_ENTRY_V6*)RtlOffsetToPointer(Namespace, Namespace->NamespaceHashesOffset + sizeof(ULONG_PTR) * (HashIndex)))
 
 #define API_SET_TO_NAMESPACE_ENTRY(Namespace, LookupHashEntry) \
    ((PAPI_SET_NAMESPACE_ENTRY_V6)RtlOffsetToPointer(Namespace, LookupHashEntry->NamespaceIndex * sizeof(API_SET_NAMESPACE_ENTRY_V6) + Namespace->NamespaceEntryOffset))

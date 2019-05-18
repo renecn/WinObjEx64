@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        11 May 2019
+*  DATE:        17 May 2019
 *
 *  Program entry point and main window handler.
 *
@@ -693,7 +693,10 @@ LRESULT MainWindowHandleWMNotify(
         }
 
         //handle tooltip
+#pragma warning(push)
+#pragma warning(disable: 26454)
         if (hdr->code == TTN_GETDISPINFO) {
+#pragma warning(pop)
             lpttt = (LPTOOLTIPTEXT)lParam;
 
             switch (lpttt->hdr.idFrom) {

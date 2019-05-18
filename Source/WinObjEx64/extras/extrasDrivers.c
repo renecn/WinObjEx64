@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        03 May 2019
+*  DATE:        17 May 2019
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -344,7 +344,10 @@ VOID CALLBACK DriversHandleNotify(
     if (nhdr->hdr.idFrom != ID_EXTRASLIST)
         return;
 
+#pragma warning(push)
+#pragma warning(disable: 26454)
     if (nhdr->hdr.code == NM_DBLCLK) {
+#pragma warning(pop)
         mark = ListView_GetSelectionMark(Context->ListView);
         if (mark >= 0) {
             lpItem = supGetItemText(Context->ListView, mark, 4, NULL);
