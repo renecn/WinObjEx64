@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        15 May 2019
+*  DATE:        18 May 2019
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -19,6 +19,7 @@
 #include "extras\extrasSSDT.h"
 #include <cfgmgr32.h>
 #include <setupapi.h>
+#include <shlwapi.h>
 
 //
 // Setup info database.
@@ -5634,4 +5635,221 @@ HFONT supCreateFontIndirect(
     }
 
     return hFont;
+}
+
+/*
+* supxGetShellViewForDesktop
+*
+* Purpose:
+*
+* Use the shell view for the desktop using the shell windows automation to find the
+* desktop web browser and then grabs its view.
+*
+* N.B. Taken entirely from Windows SDK sample.
+*
+*/
+HRESULT supxGetShellViewForDesktop(
+    REFIID riid,
+    void **ppv
+)
+{
+    IShellWindows *psw;
+    HRESULT hr;
+    HWND hwnd;
+    IDispatch* pdisp;
+    IShellBrowser *psb;
+    VARIANT vtEmpty;
+    IShellView *psv;
+
+    *ppv = NULL;
+
+#ifdef __cplusplus
+
+    vtEmpty = {};
+    hr = CoCreateInstance(CLSID_ShellWindows, NULL, CLSCTX_LOCAL_SERVER, IID_PPV_ARGS(&psw));
+    if (SUCCEEDED(hr))
+    {
+        if (S_OK == psw->FindWindowSW(&vtEmpty, &vtEmpty, SWC_DESKTOP, (long*)&hwnd, SWFO_NEEDDISPATCH, &pdisp))
+        {
+            hr = IUnknown_QueryService(pdisp, SID_STopLevelBrowser, IID_PPV_ARGS(&psb));
+            if (SUCCEEDED(hr))
+            {
+
+                hr = psb->QueryActiveShellView(&psv);
+                if (SUCCEEDED(hr))
+                {
+                    hr = psv->QueryInterface(riid, ppv);
+                    psv->Release();
+                }
+                psb->Release();
+            }
+            pdisp->Release();
+        }
+        else
+        {
+            hr = E_FAIL;
+        }
+        psw->Release();
+    }
+
+#else
+
+    vtEmpty.vt = VT_EMPTY;
+    hr = CoCreateInstance(&CLSID_ShellWindows, NULL, CLSCTX_LOCAL_SERVER, &IID_IShellWindows, &psw);
+    if (SUCCEEDED(hr))
+    {
+        if (S_OK == psw->lpVtbl->FindWindowSW(psw, &vtEmpty, &vtEmpty, SWC_DESKTOP, (long*)&hwnd, SWFO_NEEDDISPATCH, &pdisp))
+        {
+            hr = IUnknown_QueryService((IUnknown*)pdisp, &SID_STopLevelBrowser, &IID_IShellBrowser, &psb);
+            if (SUCCEEDED(hr))
+            {
+                hr = psb->lpVtbl->QueryActiveShellView(psb, &psv);
+                if (SUCCEEDED(hr))
+                {
+                    hr = psv->lpVtbl->QueryInterface(psv, riid, ppv);
+                    psv->lpVtbl->Release(psv);
+                }
+                psb->lpVtbl->Release(psb);
+            }
+            pdisp->lpVtbl->Release(pdisp);
+        }
+        else
+        {
+            hr = E_FAIL;
+        }
+        psw->lpVtbl->Release(psw);
+    }
+
+#endif
+    return hr;
+}
+
+/*
+* supxGetShellDispatchFromView
+*
+* Purpose:
+*
+* From a shell view object gets its automation interface and from that gets the shell
+* application object that implements IShellDispatch2 and related interfaces.
+*
+* N.B. Taken entirely from Windows SDK sample.
+*
+*/
+HRESULT supxGetShellDispatchFromView(IShellView *psv, REFIID riid, void **ppv)
+{
+    HRESULT hr;
+    IDispatch *pdispBackground;
+    IShellFolderViewDual *psfvd;
+    IDispatch *pdisp;
+
+    *ppv = NULL;
+
+#ifdef __cplusplus
+
+    hr = psv->GetItemObject(SVGIO_BACKGROUND, IID_PPV_ARGS(&pdispBackground));
+    if (SUCCEEDED(hr))
+    {
+        hr = pdispBackground->QueryInterface(IID_PPV_ARGS(&psfvd));
+        if (SUCCEEDED(hr))
+        {
+            hr = psfvd->get_Application(&pdisp);
+            if (SUCCEEDED(hr))
+            {
+                hr = pdisp->QueryInterface(riid, ppv);
+                pdisp->Release();
+            }
+            psfvd->Release();
+        }
+        pdispBackground->Release();
+    }
+
+#else
+
+    hr = psv->lpVtbl->GetItemObject(psv, SVGIO_BACKGROUND, &IID_IDispatch, &pdispBackground);
+    if (SUCCEEDED(hr))
+    {
+        hr = pdispBackground->lpVtbl->QueryInterface(pdispBackground, &IID_IShellFolderViewDual, &psfvd);
+        if (SUCCEEDED(hr))
+        {
+            hr = psfvd->lpVtbl->get_Application(psfvd, &pdisp);
+            if (SUCCEEDED(hr))
+            {
+                hr = pdisp->lpVtbl->QueryInterface(pdisp, riid, ppv);
+                pdisp->lpVtbl->Release(pdisp);
+            }
+            psfvd->lpVtbl->Release(psfvd);
+        }
+        pdispBackground->lpVtbl->Release(pdispBackground);
+    }
+
+#endif
+    return hr;
+}
+
+/*
+* supShellExecInExplorerProcess
+*
+* Purpose:
+*
+* Run ShellExecute from Windows Explorer process through shell interfaces
+* making it run with IL of Windows Explorer and not WinObjEx64.
+*
+* N.B. Taken entirely from Windows SDK sample.
+*
+*/
+HRESULT WINAPI supShellExecInExplorerProcess(
+    _In_ PCWSTR pszFile)
+{
+    HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+    IShellView *psv;
+    IShellDispatch2 *psd;
+    BSTR bstrFile;
+    VARIANT vtEmpty;
+
+    if (SUCCEEDED(hr)) {
+
+#ifdef __cplusplus
+
+        hr = supxGetShellViewForDesktop(IID_PPV_ARGS(&psv));
+        if (SUCCEEDED(hr))
+        {
+            hr = supxGetShellDispatchFromView(psv, IID_PPV_ARGS(&psd));
+            if (SUCCEEDED(hr))
+            {
+                bstrFile = SysAllocString(pszFile);
+                hr = bstrFile ? S_OK : E_OUTOFMEMORY;
+                if (SUCCEEDED(hr))
+                {
+                    vtEmpty = {};
+                    hr = psd->ShellExecuteW(bstrFile, vtEmpty, vtEmpty, vtEmpty, vtEmpty);
+                    SysFreeString(bstrFile);
+                }
+                psd->Release();
+            }
+            psv->Release();
+        }
+
+#else
+        hr = supxGetShellViewForDesktop(&IID_IShellView, &psv);
+        if (SUCCEEDED(hr)) {
+            hr = supxGetShellDispatchFromView(psv, &IID_IShellDispatch2, &psd);
+            if (SUCCEEDED(hr))
+            {
+                bstrFile = SysAllocString(pszFile);
+                hr = bstrFile ? S_OK : E_OUTOFMEMORY;
+                if (SUCCEEDED(hr))
+                {
+                    vtEmpty.vt = VT_EMPTY;
+                    hr = psd->lpVtbl->ShellExecuteW(psd, bstrFile, vtEmpty, vtEmpty, vtEmpty, vtEmpty);
+                    SysFreeString(bstrFile);
+                }
+
+                psd->lpVtbl->Release(psd);
+            }
+            psv->lpVtbl->Release(psv);
+        }
+#endif
+        CoUninitialize();
+    }
+    return hr;
 }

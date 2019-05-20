@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.115
 *
-*  DATE:        17 May 2019
+*  DATE:        18 May 2019
 *
 *  Common header file for the ntos API functions and definitions.
 *
@@ -796,9 +796,11 @@ typedef struct _SYSTEM_ISOLATED_USER_MODE_INFORMATION {
     BOOLEAN HvciStrictMode : 1;
     BOOLEAN DebugEnabled : 1;
     BOOLEAN FirmwarePageProtection : 1;
-    BOOLEAN SpareFlags : 1;
+    BOOLEAN EncryptionKeyAvailable : 1;
+    BOOLEAN SpareFlags : 2;
     BOOLEAN TrustletRunning : 1;
-    BOOLEAN SpareFlags2 : 1;
+    BOOLEAN HvciDisableAllowed : 1;
+    BOOLEAN SpareFlags2 : 6;
     BOOLEAN Spare0[6];
     ULONGLONG Spare1;
 } SYSTEM_ISOLATED_USER_MODE_INFORMATION, *PSYSTEM_ISOLATED_USER_MODE_INFORMATION;
@@ -1546,7 +1548,15 @@ typedef struct _SYSTEM_SPECULATION_CONTROL_INFORMATION {
         ULONG BpbDisabledKernelToUser : 1;
         ULONG SpecCtrlRetpolineEnabled : 1;
         ULONG SpecCtrlImportOptimizationEnabled : 1;
-        ULONG Reserved : 16;
+        ULONG EnhancedIbrs : 1;
+        ULONG HvL1tfStatusAvailable : 1;
+        ULONG HvL1tfProcessorNotAffected : 1;
+        ULONG HvL1tfMigitationEnabled : 1;
+        ULONG HvL1tfMigitationNotEnabled_Hardware : 1;
+        ULONG HvL1tfMigitationNotEnabled_LoadOption : 1;
+        ULONG HvL1tfMigitationNotEnabled_CoreScheduler : 1;
+        ULONG EnhancedIbrsReported : 1;
+        ULONG Reserved : 8;
     } SpeculationControlFlags;
 } SYSTEM_SPECULATION_CONTROL_INFORMATION, *PSYSTEM_SPECULATION_CONTROL_INFORMATION;
 
@@ -2692,7 +2702,8 @@ typedef struct _SYSTEM_HANDLE_INFORMATION_EX {
 #define SE_INC_WORKING_SET_PRIVILEGE (33L)
 #define SE_TIME_ZONE_PRIVILEGE (34L)
 #define SE_CREATE_SYMBOLIC_LINK_PRIVILEGE (35L)
-#define SE_MAX_WELL_KNOWN_PRIVILEGE SE_CREATE_SYMBOLIC_LINK_PRIVILEGE
+#define SE_DELEGATE_SESSION_USER_IMPERSONATE_PRIVILEGE (36L)
+#define SE_MAX_WELL_KNOWN_PRIVILEGE SE_DELEGATE_SESSION_USER_IMPERSONATE_PRIVILEGE
 
 //
 // Generic test for success on any status value (non-negative numbers
@@ -5879,6 +5890,12 @@ LdrQueryImageFileExecutionOptions(
     _Out_ PVOID Buffer,
     _In_ ULONG BufferSize,
     _Out_opt_ PULONG ResultSize);
+
+NTSYSAPI
+BOOLEAN
+NTAPI
+LdrIsModuleSxsRedirected( //LdrEntry->Flags->Redirected
+    _In_ PVOID DllHandle);
 
 NTSYSAPI
 NTSTATUS

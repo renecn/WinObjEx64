@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        15 May 2019
+*  DATE:        17 May 2019
 *
 *  Common header file for the Windows Object Explorer.
 *
@@ -42,6 +42,7 @@
 #pragma comment(lib, "Aclui.lib")
 #pragma comment(lib, "comctl32.lib")
 #pragma comment(lib, "Setupapi.lib")
+#pragma comment(lib, "shlwapi.lib")
 #pragma comment(lib, "Version.lib")
 
 #if defined (_MSC_VER)

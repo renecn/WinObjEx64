@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        15 May 2019
+*  DATE:        18 May 2019
 *
 *  Common header file for the program support routines.
 *
@@ -594,3 +594,6 @@ BOOLEAN supSLCacheEnumerate(
 
 HFONT supCreateFontIndirect(
     _In_ LPWSTR FaceName);
+
+HRESULT WINAPI supShellExecInExplorerProcess(
+    _In_ PCWSTR pszFile);

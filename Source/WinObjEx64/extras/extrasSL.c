@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.74
 *
-*  DATE:        15 May 2019
+*  DATE:        18 May 2019
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -272,7 +272,6 @@ VOID SLCacheDialogViewBinaryData(
 {
     SL_KMEM_CACHE_VALUE_DESCRIPTOR *CacheDescriptor;
     PCHAR DataPtr;
-    SHELLEXECUTEINFO ShInfo;
 
     WCHAR szFileName[MAX_PATH * 2];
 
@@ -300,19 +299,7 @@ VOID SLCacheDialogViewBinaryData(
         TRUE,
         FALSE))
     {
-        RtlSecureZeroMemory(&ShInfo, sizeof(ShInfo));
-        ShInfo.cbSize = sizeof(ShInfo);
-        ShInfo.lpVerb = NULL;
-        ShInfo.lpFile = szFileName;
-        ShInfo.nShow = SW_SHOW;
-        ShInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
-        if (ShellExecuteEx(&ShInfo)) {
-            if (ShInfo.hProcess) {
-                WaitForSingleObject(ShInfo.hProcess, INFINITE);
-                CloseHandle(ShInfo.hProcess);
-            }
-            DeleteFile(szFileName);
-        }
+        supShellExecInExplorerProcess(szFileName);
     }
 
 }
